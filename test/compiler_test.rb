@@ -4,7 +4,7 @@ require 'mocha'
 require 'resource'
 
 class CompilerTest < Test::Unit::TestCase
-  def test_cant_do_much_with_jobs_until_enqueued
+  def test_compile_generates_correct_classes_and_methods
     progress_response = Resource::Response.new
     progress_response.id = 0
     progress_response.status = Resource::Response::Status::IN_PROGRESS

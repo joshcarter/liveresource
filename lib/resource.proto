@@ -3,19 +3,29 @@ package resource;
 message Null {
 }
 
-message Response {
-  enum Status {
+message ResponseHeader {
+  enum MessageStatus {
     QUEUED = 0;
     IN_PROGRESS = 1;
-    OK = 2;
-    ERROR = 3;
+    DONE = 2;
   }
 
-  required uint32 id = 1;
-  required Status status = 2;
-  optional string value = 3;    // Only valid if status is OK or ERROR
+  required MessageStatus status = 1;
+  optional string error = 2;
+}
+
+enum Status {
+  OK = 0;
+  FAILED = 1;
+}
+
+message FanStatus {
+  ResponseHeader header;
+
+  required Status status = 1;
+  optional uint32 tach = 2;
 }
 
 service Fan {
-  rpc Status (Null) returns (Response);
+  rpc Status (Null) returns (FanStatus);
 }
