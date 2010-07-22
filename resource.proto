@@ -1,0 +1,21 @@
+package resource;
+
+message Null {
+}
+
+message Response {
+  enum Status {
+    QUEUED = 0;
+    IN_PROGRESS = 1;
+    DONE = 2;
+  }
+
+  required uint32 id = 1;
+  required Status status = 2;
+  optional string error = 3;	// Only valid if status == DONE
+  optional string value = 4;    // Only valid if status == DONE
+}
+
+service Fan {
+  rpc StatusRightNow (Null) returns (Response);
+}
