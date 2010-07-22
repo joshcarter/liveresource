@@ -17,5 +17,5 @@ message Response {
 }
 
 service Fan {
-  rpc StatusRightNow (Null) returns (Response);
+  rpc Status (Null) returns (Response);
 }

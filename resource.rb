@@ -9,6 +9,11 @@ require 'pp'
 module Protobuf
   module Visitor
     class CreateRpcVisitor < Base
+
+      #
+      # Override existing create_files so we create stub classes with the
+      # correct methods instead of creating files with gunk in them.
+      #
       def create_files(message_file, out_dir, create_file=true)
         @services.each do |service_name, rpcs|
           message_module = package.map{|p| Util.camelize(p.to_s)}.join('::')
@@ -25,14 +30,16 @@ module Protobuf
                 "yo"
               end
             end
-          end # each rpc
-        end # each service
+          end
+        end
       end # create_files
     end # CreateRpcVisitor
   end # Visitor
 end # ProtoBuf
 
+#
 # This class ensures we only compile the protocol buffer file once.
+#
 class DynamicCompiler
   @@already_compiled = false
 
