@@ -51,4 +51,4 @@ class DynamicCompiler
   end
 end
 
-DynamicCompiler.compile("resource.proto")
+DynamicCompiler.compile(File::join(File::dirname(__FILE__), "resource.proto"))
