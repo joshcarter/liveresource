@@ -1,6 +1,6 @@
 require 'rubygems'
 require 'dnssd'
-require 'service_info'
+require File.join(File.dirname(__FILE__), 'service_info')
 
 Thread.abort_on_exception = true
 
@@ -17,8 +17,10 @@ module DnssdService
   end
 
   def run(name)
-    @service.name = name
-    @service.port = (type.hash % 10000) + 10000 # TODO: ensure port cannot conflict
+    # Nuke this usually-immutable fields to new values
+    # TODO: ensure port cannot conflict
+    @service.instance_variable_set(:@name, name)
+    @service.instance_variable_set(:@port, (@service.dnssd_type.hash % 10000) + 10000)
 
     # Per book, should always have a text record, minimally with 
     # txtvers set to 1.

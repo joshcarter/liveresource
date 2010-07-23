@@ -13,16 +13,6 @@ class ServiceInfo
     @address = params[:address] || nil
   end
 
-  def self.load(file_name)
-    service = nil
-
-    File.open(file_name) do |f|
-      service = ServiceInfo.new(YAML::load(f))
-    end
-
-    return service
-  end
-
   def address
     # Auto-resolve address if needed
     if @address.nil?

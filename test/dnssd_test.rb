@@ -15,6 +15,6 @@ class CompilerTest < Test::Unit::TestCase
     fan = Test::Fan.new
 
     fan.expects(:run).once
-    fan.is_server!
+    fan.run("foo")
   end
 end

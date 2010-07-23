@@ -5,7 +5,7 @@ require 'protobuf/message/service'
 require 'protobuf/message/extend'
 require 'protobuf/compiler/compiler'
 require 'pp'
-require 'dnssd_server'
+require File.join(File.dirname(__FILE__), 'dnssd_service')
 
 #
 # Override create_files in each of the Message and RPC handlers so they
@@ -63,19 +63,9 @@ module Protobuf
           service_class = modules.last.const_set(service_name, Class.new)
           # puts "Created class #{service_class} under parent #{modules.last}"
 
-          # Add server/stub methods
+          # Add DNS-SD server/stub methods
           service_class.class_eval do
             include DnssdService
-
-            # If this is a server, it should include the DnssdServer module
-            def is_server!
-              self.run("Bob") # TODO: do better than this...
-            end
-
-            # TODO: if this is a stub (client), do something about that
-            def is_stub!
-              raise NotImplementedError.new("client must override this method")
-            end
           end
 
           # Add methods for each RPC
