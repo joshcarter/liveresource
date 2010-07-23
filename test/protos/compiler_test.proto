@@ -1,0 +1,37 @@
+//
+// NOTE: naming conventions in here are wordy on purpose; the intent is to
+//       ensure that the compiler does the right CamelCase and underscoring
+//       in the right places. DO NOT take this as "good style."
+//
+
+package compiler.test;
+
+message Null {
+}
+
+message ResponseHeader {
+  enum MessageStatus {
+    QUEUED = 0;
+    IN_PROGRESS = 1;
+    DONE = 2;
+  }
+
+  required MessageStatus status = 1;
+  optional string error = 2;
+}
+
+enum Status {
+  OK = 0;
+  FAILED = 1;
+  UNKNOWN = 2;
+}
+
+message FanStatus {
+  required ResponseHeader header = 1;
+  required Status status = 2;
+  optional uint32 rotations_per_minute = 3;
+}
+
+service Fan {
+  rpc GetFanStatus (Null) returns (FanStatus);
+}

@@ -20,10 +20,9 @@ enum Status {
 }
 
 message FanStatus {
-  ResponseHeader header;
-
-  required Status status = 1;
-  optional uint32 tach = 2;
+  required ResponseHeader header = 1;
+  required Status status = 2;
+  optional uint32 tach = 3;
 }
 
 service Fan {
