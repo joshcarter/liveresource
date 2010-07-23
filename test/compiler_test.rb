@@ -3,7 +3,7 @@ require 'test/unit'
 require 'mocha'
 require 'live_resource'
 
-resource_require_stub File.join(File.dirname(__FILE__), 'protos', 'compiler_test')
+require_resource File.join(File.dirname(__FILE__), 'protos', 'compiler_test')
 
 class CompilerTest < Test::Unit::TestCase
   def test_compile_generates_classes_and_modules
@@ -30,7 +30,7 @@ class CompilerTest < Test::Unit::TestCase
   end
 
   def test_generates_stub_class
-    fan = Test::Fan::Stub.new
+    fan = Test::Fan.new
 
     assert fan.methods.include?("get_fan_status")
 

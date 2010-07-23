@@ -5,6 +5,7 @@ require 'protobuf/message/service'
 require 'protobuf/message/extend'
 require 'protobuf/compiler/compiler'
 require 'pp'
+require 'dnssd_server'
 
 #
 # Override create_files in each of the Message and RPC handlers so they
@@ -30,7 +31,7 @@ end
 module Protobuf
   module Visitor
     class CreateRpcVisitor < Base
-      def create_files(message_file, server_or_stub, _)
+      def create_files(message_file, _1, _2)
         @services.each do |service_name, rpcs|
 
           #
@@ -40,7 +41,6 @@ module Protobuf
 
           # This list contains: "Foo", "Bar", "Baz"
           module_names = package.map{ |p| Util.camelize(p.to_s) }
-          module_names << service_name
 
           # This list will contain: Foo (the module), Foo::Bar, Foo::Bar::Baz
           modules = Array.new
@@ -60,9 +60,11 @@ module Protobuf
             end
           end
 
-          service_class = modules.last.const_set(server_or_stub, Class.new)
-
+          service_class = modules.last.const_set(service_name, Class.new)
           # puts "Created class #{service_class} under parent #{modules.last}"
+          
+          # Service classes need dnssd module
+          service_class.class_eval { include DnssdServer }
 
           rpcs.each do |name, request, response|
             name = Util.underscore(name)
@@ -84,7 +86,7 @@ end # ProtoBuf
 class ResourceCompiler
   @@compiled_protos = Array.new
 
-  def self.compile(file, server_or_stub)
+  def self.compile(file)
     file += ".proto"
 
     # See if we've already compiled this proto
@@ -95,15 +97,11 @@ class ResourceCompiler
       @@compiled_protos << stat
     end
 
-    Protobuf::Compiler.new.compile(File::basename(file), File::dirname(file), server_or_stub, false)
+    Protobuf::Compiler.new.compile(File::basename(file), File::dirname(file), '', false)
     return true
   end
 end
 
-def resource_require(file)
-  ResourceCompiler::compile(file, "Server")
-end
-
-def resource_require_stub(file)
-  ResourceCompiler::compile(file, "Stub")
+def require_resource(file)
+  ResourceCompiler::compile(file)
 end
