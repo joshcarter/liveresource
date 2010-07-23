@@ -4,7 +4,7 @@
 //       in the right places. DO NOT take this as "good style."
 //
 
-package compiler.test;
+package test;
 
 message Null {
 }
