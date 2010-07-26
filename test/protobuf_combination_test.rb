@@ -16,7 +16,7 @@ class CompositeMessageTest < Test::Unit::TestCase
     # intentionally leaving message1.bar empty
     
     header1 = Test::Header.new
-    header1.name = 'my header'
+    header1.name = message1.class.to_s
     header1.status = Test::Header::MessageStatus::QUEUED
     # Serialize message to the bytes field in Header
     header1.message = message1.serialize_to_string
@@ -25,14 +25,27 @@ class CompositeMessageTest < Test::Unit::TestCase
 
     # Read them back
     header2 = Test::Header.new
-    message2 = Test::Message.new
 
     File.open(TMP_FILE, 'r') { |f| header2.parse_from(f) }
     File.unlink(TMP_FILE)
 
+    # Use class information saved in the header to create the message
+    #
+    
+    # Break apart Foo::Test::Header into Header (the class) 
+    # and [Foo, Test] (the modules)
+    class_name, *module_names = header2.name.split('::').reverse
+
+    # Morph module names into module constants, using each module in "modules"
+    # to resolve the next name.
+    modules = [Object]
+    module_names.reverse.each { |m| modules << modules.last.const_get(m) }
+
+    # Create new message
+    message2 = modules.last.const_get(class_name).new
     message2.parse_from_string(header2.message)
     
-    assert_equal 'my header', header2.name
+    assert_equal 'Test::Message', header2.name
     assert_equal Test::Header::MessageStatus::QUEUED, header2.status
     assert_equal 'this is foo', message2.foo
     assert_equal 'this is baz', message2.baz
