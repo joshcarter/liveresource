@@ -1,0 +1,26 @@
+//
+// NOTE: naming conventions in here are wordy on purpose; the intent is to
+//       ensure that the compiler does the right CamelCase and underscoring
+//       in the right places. DO NOT take this as "good style."
+//
+
+package test;
+
+message Header {
+  enum MessageStatus {
+    QUEUED = 0;
+    IN_PROGRESS = 1;
+    DONE = 2;
+  }
+
+  required string name = 1;
+  required MessageStatus status = 2;
+  required bytes message = 3;
+}
+
+message Message {
+  optional string foo = 1;
+  optional string bar = 2;
+  optional string baz = 3;
+}
+
