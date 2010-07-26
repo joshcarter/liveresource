@@ -29,20 +29,14 @@ class CompositeMessageTest < Test::Unit::TestCase
     File.open(TMP_FILE, 'r') { |f| header2.parse_from(f) }
     File.unlink(TMP_FILE)
 
-    # Use class information saved in the header to create the message
+    # Use class information saved in the header to create the message.
     #
-    
-    # Break apart Foo::Test::Header into Header (the class) 
-    # and [Foo, Test] (the modules)
-    class_name, *module_names = header2.name.split('::').reverse
-
-    # Morph module names into module constants, using each module in "modules"
-    # to resolve the next name.
-    modules = [Object]
-    module_names.reverse.each { |m| modules << modules.last.const_get(m) }
+    scope, const_name = nil, nil
+    header2.name.split('::').reduce(Object) { |scope, const_name| scope.const_get(const_name) }
+    klass = scope.const_get(const_name)
 
     # Create new message
-    message2 = modules.last.const_get(class_name).new
+    message2 = klass.new
     message2.parse_from_string(header2.message)
     
     assert_equal 'Test::Message', header2.name
