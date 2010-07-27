@@ -14,11 +14,11 @@ module Test
       p.parse_from_string(parameter)
 
       puts "Got RPC:"
-      puts "  - foo: #{parameter.foo}"
-      puts "  - bar: #{parameter.bar}"
-      puts "  - baz: #{parameter.baz}"
+      puts "  - foo: #{p.foo}"
+      puts "  - bar: #{p.bar}"
+      puts "  - baz: #{p.baz}"
 
-      r = Test::TestServiceResult
+      r = Test::TestServiceResult.new
       r.code = Test::TestServiceResult::Code::OK
       return r
     end
@@ -51,4 +51,23 @@ class ServiceTest < Test::Unit::TestCase
     s.stop
   end
 
+  def test_can_send_rpc_to_service_thread
+    s = Service.new(Test::TestService, 'My service')
+
+    param = Test::TestServiceParameter.new
+    param.foo = 'this is foo'
+
+    msg = Rpcmsg::Header.new
+    msg.method = 'test_method'
+    msg.parameter = param.serialize_to_string
+
+    ctx = ZMQ::Context.new(1)
+    @rpc_sender = ctx.socket(ZMQ::REQ);
+    @rpc_sender.connect(s.info.zmq_address)
+    @rpc_sender.send(msg.serialize_to_string)
+
+    sleep 1
+
+    s.stop
+  end
 end
