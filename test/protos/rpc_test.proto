@@ -1,0 +1,13 @@
+package test;
+
+message Request {
+  required string param = 1;
+}
+
+message Response {
+  required string result = 1;
+}
+
+service RpcService {
+  rpc Operation (Request) returns (Response);
+}
