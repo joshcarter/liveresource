@@ -1,9 +1,3 @@
-//
-// NOTE: naming conventions in here are wordy on purpose; the intent is to
-//       ensure that the compiler does the right CamelCase and underscoring
-//       in the right places. DO NOT take this as "good style."
-//
-
 package test;
 
 message Header {

@@ -2,7 +2,7 @@ require 'rubygems'
 require 'test/unit'
 require 'live_resource'
 
-require_resource File.join(File.dirname(__FILE__), 'protos', 'combination')
+require_resource File.join(File.dirname(__FILE__), 'protos', 'protobuf_combination_test')
 
 class CompositeMessageTest < Test::Unit::TestCase
   TMP_FILE = File.join(File.dirname(__FILE__), 'composite.dat')
