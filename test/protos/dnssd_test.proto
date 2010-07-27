@@ -3,6 +3,6 @@ package test;
 message Null {
 }
 
-service Fan {
-  rpc GetFanStatus (Null) returns (Null);
+service DnssdTestService {
+  rpc Operation (Null) returns (Null);
 }

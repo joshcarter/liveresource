@@ -10,21 +10,29 @@ class CompilerTest < Test::Unit::TestCase
   def test_can_assimilate_one_object
     Thread.expects(:new).once.returns(nil) # don't actually create thread
 
-    fan1 = Test::Fan.new
-    fan2 = Test::Fan.new
+    s1 = Test::DnssdTestService.new
+    s2 = Test::DnssdTestService.new
 
-    DnssdService.assimilate(fan1, 'My fan')
+    DnssdService.assimilate(s1, 'My service')
 
-    assert_equal true, fan1.respond_to?(:run)
-    assert_equal false, fan2.respond_to?(:run)
+    assert_equal true, s1.respond_to?(:run)
+    assert_equal false, s2.respond_to?(:run)
   end
 
   def test_resource_has_appropriate_dnssd_type
     Thread.expects(:new).once.returns(nil) # don't actually create thread
 
-    fan = Test::Fan.new
-    DnssdService.assimilate(fan, 'My fan')
+    s = Test::DnssdTestService.new
+    DnssdService.assimilate(s, 'My service')
 
-    assert_equal '_fan_test._tcp', fan.service.dnssd_type
+    assert_equal '_dnssd_test_service_test._tcp', s.service.dnssd_type
+  end
+
+  def disable_test_dnssd_can_stop_main_thread
+    DNSSD.expects(:register!).once.returns(nil)
+
+    s = Test::DnssdTestService.new
+    DnssdService.assimilate(s, 'My service')
+    s.stop
   end
 end

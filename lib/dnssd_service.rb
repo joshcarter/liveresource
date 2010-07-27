@@ -1,8 +1,12 @@
 require 'rubygems'
 require 'dnssd'
+require 'zmq'
 require File.join(File.dirname(__FILE__), 'service_info')
 
 Thread.abort_on_exception = true
+
+class ThreadStopRequest < RuntimeError
+end
 
 module DnssdService
   attr_reader :service
@@ -10,12 +14,12 @@ module DnssdService
   # Add DNS-SD server/stub methods
   def self.assimilate(object, service_name, service_port = nil)
     object.extend DnssdService
-    object.instance_variable_set(:@running, false)
+    object.instance_variable_set(:@thread, nil)
     object.run(service_name, service_port)
   end
 
   def run(service_name, service_port)
-    raise "Object is already a DNS-SD service" if @running
+    raise "Object is already a DNS-SD service" if @thread
 
     # Convert ancestor chain from CamelStyle to underscore_style
     type = self.class.to_s.gsub(/\B[A-Z]/, '_\&').downcase
@@ -32,28 +36,76 @@ module DnssdService
       :name => service_name,
       :port => service_port)
 
-    @running = true
+    # Set up pipe for sending thread stop event
+    @stop_request_read, @stop_request_write = IO.pipe
+
     @thread = Thread.new do
       self.main
     end
   end
 
-  def main
+  def stop
+    @stop_request_write.write "stop, please"
+    @stop_request_write.close
+
+    join
+  end
+
+  def join
+    raise "Cannot join, not running" unless @thread
+
+    @thread.join
+  end
+
+  protected ########################################
+
+  def register_service
     # Per book, should always have a text record, minimally with 
     # txtvers set to 1.
     text_record = DNSSD::TextRecord.new
     text_record['txtvers'] = 1
 
-    # puts "Starting queue registration"
+    # puts "Starting DNS-SD registration"
     DNSSD.register!(@service.name, @service.dnssd_type, 'local.', @service.port, text_record)
     # puts "Registered"
+  end
 
-    puts "Dispatcher thread running"
+  def start_rpc_listener
+    ctx = ZMQ::Context.new(1)
+    @rpc_listener = ctx.socket(ZMQ::REP);
+    @rpc_listener.bind(@service.zmq_address)
+  end
 
-    sleep(2)
+  def dispatch_rpc(rpc)
+    raise NotYetImplemented.new
+  end
 
-    puts "Dispatcher thread stopping"
-    @running = false
+  def main
+    # puts "Dispatcher thread running"
+    
+    register_service
+
+    begin
+      loop do
+        pending = select([@stop_request_read, @rpc_listener], [], [], nil)
+
+        pending.first.each do |io|
+          if (io == @stop_request_read)
+            io.read; io.close
+            raise ThreadStopRequest
+          elsif (io == @rpc_listener)
+            rpc = io.read
+            dispatch_rpc(rpc)
+          else
+            raise "Unexpected IO source #{io}"
+          end
+        end
+      end
+    rescue ThreadStopRequest => e
+      # Just fall through
+    end
+    
+    # puts "Dispatcher thread stopping"
   end
 end
 
