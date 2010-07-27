@@ -1,0 +1,8 @@
+package test;
+
+message Null {
+}
+
+service Fan {
+  rpc GetFanStatus (Null) returns (Null);
+}

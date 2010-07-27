@@ -63,11 +63,6 @@ module Protobuf
           service_class = modules.last.const_set(service_name, Class.new)
           # puts "Created class #{service_class} under parent #{modules.last}"
 
-          # Add DNS-SD server/stub methods
-          service_class.class_eval do
-            include DnssdService
-          end
-
           # Add methods for each RPC
           rpcs.each do |name, request, response|
             name = Util.underscore(name)
