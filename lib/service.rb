@@ -2,6 +2,9 @@ require 'rubygems'
 require 'dnssd'
 require 'zmq'
 require File.join(File.dirname(__FILE__), 'service_info')
+require File.join(File.dirname(__FILE__), 'resource_compiler')
+
+require_resource File.join(File.dirname(__FILE__), 'protos', 'rpc')
 
 Thread.abort_on_exception = true
 
@@ -11,7 +14,7 @@ end
 module Service
   attr_reader :info
 
-  # Add DNS-SD server/stub methods
+  # Create (and start) new server based on klass.
   def self.new(klass, service_name, service_port = nil)
     object = klass.new
     object.extend Service
@@ -78,28 +81,52 @@ module Service
     @rpc_listener.bind(@info.zmq_address)
   end
 
-  def dispatch_rpc(rpc)
-    raise NotYetImplemented.new
+  def dispatch_rpc(bytes)
+    rpc = Rpcmsg::Header.new
+    rpc.parse_from_string(bytes)
+
+    # Subclass needs to provide actual method implementation, resource
+    # compiler will have stubbed it with something that raises NYI.
+    result = self.send(rpc.method.to_sym, rpc.parameter)
+
+    # TODO: encode and send back result
   end
 
   def main
     # puts "Dispatcher thread running"
     
+    start_rpc_listener
     register_service
 
     begin
       loop do
-        pending = select([@stop_request_read, @rpc_listener], [], [], nil)
+        #
+        # TODO: can't do one select that covers both the stop request pipe
+        # and the ZMQ listener, so I need to wait on the ZMQ for 1 second,
+        # check the stop request, then go back to ZMQ. Fix me (somehow).
+        #
+        pending = select([@stop_request_read], [], [], 0)
 
-        pending.first.each do |io|
-          if (io == @stop_request_read)
-            io.read; io.close
-            raise ThreadStopRequest
-          elsif (io == @rpc_listener)
-            rpc = io.read
-            dispatch_rpc(rpc)
-          else
-            raise "Unexpected IO source #{io}"
+        if pending
+          pending.first.each do |io|
+            if (io == @stop_request_read)
+              io.read; io.close
+              raise ThreadStopRequest
+            else
+              raise "Unexpected IO source #{io}"
+            end
+          end
+        end
+
+        pending = ZMQ::select([@rpc_listener], [], [], 1)
+
+        if pending
+          pending.first.each do |io|
+            if (io == @rpc_listener)
+              dispatch_rpc(io.recv)
+            else
+              raise "Unexpected IO source #{io}"
+            end
           end
         end
       end

@@ -1,8 +1,21 @@
 package test;
 
-message Null {
+message TestServiceParameter {
+  optional string foo = 1;
+  optional string bar = 2;
+  optional string baz = 3;
+}
+
+message TestServiceResult {
+  enum Code {
+    OK = 1;
+    NotOk = 2;
+    TotallyScrewed = 3;
+  }
+
+  required Code code = 1;
 }
 
 service TestService {
-  rpc Operation (Null) returns (Null);
+  rpc TestMethod (TestServiceParameter) returns (TestServiceResult);
 }
