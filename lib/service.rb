@@ -8,14 +8,16 @@ Thread.abort_on_exception = true
 class ThreadStopRequest < RuntimeError
 end
 
-module DnssdService
-  attr_reader :service
+module Service
+  attr_reader :info
 
   # Add DNS-SD server/stub methods
-  def self.assimilate(object, service_name, service_port = nil)
-    object.extend DnssdService
+  def self.new(klass, service_name, service_port = nil)
+    object = klass.new
+    object.extend Service
     object.instance_variable_set(:@thread, nil)
     object.run(service_name, service_port)
+    return object
   end
 
   def run(service_name, service_port)
@@ -31,7 +33,7 @@ module DnssdService
     # TODO: guarantee port cannot conflict
     service_port = ((service_name + type).hash % 10000) + 10000
 
-    @service = ServiceInfo.new(
+    @info = ServiceInfo.new(
       :type => type,
       :name => service_name,
       :port => service_port)
@@ -66,14 +68,14 @@ module DnssdService
     text_record['txtvers'] = 1
 
     # puts "Starting DNS-SD registration"
-    DNSSD.register!(@service.name, @service.dnssd_type, 'local.', @service.port, text_record)
+    DNSSD.register!(@info.name, @info.dnssd_type, 'local.', @info.port, text_record)
     # puts "Registered"
   end
 
   def start_rpc_listener
     ctx = ZMQ::Context.new(1)
     @rpc_listener = ctx.socket(ZMQ::REP);
-    @rpc_listener.bind(@service.zmq_address)
+    @rpc_listener.bind(@info.zmq_address)
   end
 
   def dispatch_rpc(rpc)

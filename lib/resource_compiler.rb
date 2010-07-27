@@ -5,7 +5,6 @@ require 'protobuf/message/service'
 require 'protobuf/message/extend'
 require 'protobuf/compiler/compiler'
 require 'pp'
-require File.join(File.dirname(__FILE__), 'dnssd_service')
 
 #
 # Override create_files in each of the Message and RPC handlers so they
