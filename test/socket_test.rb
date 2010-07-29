@@ -14,7 +14,7 @@ class SocketServer
   end
 
   def run
-    server = TCPServer.open(@port)
+    server = TCPServer.open(@address, @port)
     sockets = [server, @stop_request_read]
 
     loop do
