@@ -19,7 +19,7 @@ gem_spec = Gem::Specification.new do |spec|
   candidates = Dir.glob("{lib}/**/*")
   spec.files = candidates.delete_if {|c| c.match(/\.swp|\.svn|html|pkg/)}
   spec.add_dependency('ruby_protobuf')
-  spec.add_dependency('zmq')
+  spec.add_dependency('eventmachine')
   spec.add_dependency('dnssd')
   spec.add_dependency('mocha')
 end

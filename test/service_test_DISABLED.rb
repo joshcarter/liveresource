@@ -26,7 +26,7 @@ module Test
 end
 
 class ServiceTest < Test::Unit::TestCase
-  def test_can_assimilate_one_object
+  def DISABLED_test_can_assimilate_one_object
     Thread.expects(:new).once.returns(nil) # don't actually create thread
 
     s1 = Service.new(Test::TestService, 'My service')
@@ -36,7 +36,7 @@ class ServiceTest < Test::Unit::TestCase
     assert_equal false, s2.respond_to?(:run)
   end
 
-  def test_resource_has_appropriate_dnssd_type
+  def DISABLED_test_resource_has_appropriate_dnssd_type
     Thread.expects(:new).once.returns(nil) # don't actually create thread
 
     s = Service.new(Test::TestService, 'My service')
@@ -47,11 +47,16 @@ class ServiceTest < Test::Unit::TestCase
   def test_can_stop_service_thread
     DNSSD.expects(:register!).once.returns(nil)
 
+    puts "creating service"
     s = Service.new(Test::TestService, 'My service')
+    puts "service created"
+
+    sleep 3
+    puts "I'm about to call stop"
     s.stop
   end
 
-  def test_can_send_rpc_to_service_thread
+  def DISABLED_test_can_send_rpc_to_service_thread
     s = Service.new(Test::TestService, 'My service')
 
     param = Test::TestServiceParameter.new
