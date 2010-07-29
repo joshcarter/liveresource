@@ -39,8 +39,9 @@ module Codec
         message_size = @buffer.unpack('N').first
 
         if (@buffer.size >= SIZE_BYTES + message_size)
-          @buffer.slice! 0, SIZE_BYTES
-          receive_message @buffer
+          @buffer.slice!(0, SIZE_BYTES)
+
+          receive_message @buffer.slice!(0, message_size)
         else
           break
         end
