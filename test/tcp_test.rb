@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'test/unit'
-require 'simple_server_tcp'
-require 'simple_client_tcp'
+require 'server_tcp'
+require 'client_tcp'
 require 'simple_message_codec'
 
 class TcpMessageServer
