@@ -11,10 +11,10 @@ Rake::TestTask.new :test do |test|
 end
 
 gem_spec = Gem::Specification.new do |spec|
-  spec.name = 'resource'
-  spec.version = '1.0.0'
-  spec.summary = 'Spectra Logic Resource System'
-  spec.author = 'Spectra Logic'
+  spec.name = 'liveresource'
+  spec.version = '0.0.1'
+  spec.summary = 'Live Resource'
+  spec.author = 'Josh Carter <public@joshcarter.com>'
   spec.has_rdoc = false
   candidates = Dir.glob("{lib}/**/*")
   spec.files = candidates.delete_if {|c| c.match(/\.swp|\.svn|html|pkg/)}
