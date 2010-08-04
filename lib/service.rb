@@ -8,9 +8,6 @@ require_resource File.join(File.dirname(__FILE__), 'protos', 'rpc')
 
 Thread.abort_on_exception = true
 
-class ThreadStopRequest < RuntimeError
-end
-
 module Service
   attr_reader :info
 
@@ -20,6 +17,7 @@ module Service
     object.extend Service
     object.instance_variable_set(:@thread, nil)
     object.run(service_name, service_port)
+    puts "returing from new: #{object.inspect}"
     return object
   end
 
@@ -41,18 +39,16 @@ module Service
       :name => service_name,
       :port => service_port)
 
-    # Set up pipe for sending thread stop event
-    @stop_request_read, @stop_request_write = IO.pipe
-
-    @thread = Thread.new do
-      self.main
-    end
+    puts "in run, creating thread"
+    @thread = Thread.new { self.main }
+    puts "returning from run"
   end
 
   def stop
-    @stop_request_write.write "stop, please"
-    @stop_request_write.close
-
+    puts "stopping"
+    @rpc_listener.close
+    @zmq_context.close
+    @zmq_context = nil
     join
   end
 
@@ -76,8 +72,8 @@ module Service
   end
 
   def start_rpc_listener
-    ctx = ZMQ::Context.new(1)
-    @rpc_listener = ctx.socket(ZMQ::REP);
+    @zmq_context = ZMQ::Context.new(1)
+    @rpc_listener = @zmq_context.socket(ZMQ::REP);
     @rpc_listener.bind(@info.zmq_address)
   end
 
@@ -100,25 +96,9 @@ module Service
 
     begin
       loop do
-        #
-        # TODO: can't do one select that covers both the stop request pipe
-        # and the ZMQ listener, so I need to wait on the ZMQ for 1 second,
-        # check the stop request, then go back to ZMQ. Fix me (somehow).
-        #
-        pending = select([@stop_request_read], [], [], 0)
-
-        if pending
-          pending.first.each do |io|
-            if (io == @stop_request_read)
-              io.read; io.close
-              raise ThreadStopRequest
-            else
-              raise "Unexpected IO source #{io}"
-            end
-          end
-        end
-
+        puts "select"
         pending = ZMQ::select([@rpc_listener], [], [], 1)
+        puts "select: #{pending}"
 
         if pending
           pending.first.each do |io|
@@ -130,7 +110,8 @@ module Service
           end
         end
       end
-    rescue ThreadStopRequest => e
+    rescue RuntimeError => e
+      puts "Got exception: #{e.inspect}"
       # Just fall through
     end
     
