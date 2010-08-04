@@ -1,6 +1,6 @@
 require 'rubygems'
 require 'test/unit'
-require 'live_resource'
+require 'liveresource'
 require 'socket'
 
 class SocketServer

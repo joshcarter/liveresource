@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'test/unit'
 require 'mocha'
-require 'live_resource'
+require 'liveresource'
 
 require_resource File.join(File.dirname(__FILE__), 'protos', 'compiler_test')
 

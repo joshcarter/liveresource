@@ -1,4 +1,4 @@
-require 'live_resource'
+require 'liveresource'
 require 'test/unit'
 
 require_resource File.join(File.dirname(__FILE__), 'protos', 'rpc_test')

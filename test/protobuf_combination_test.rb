@@ -1,6 +1,6 @@
 require 'rubygems'
 require 'test/unit'
-require 'live_resource'
+require 'liveresource'
 
 require_resource File.join(File.dirname(__FILE__), 'protos', 'protobuf_combination_test')
 
