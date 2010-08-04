@@ -1,9 +1,0 @@
-//
-// Wrapper for RPCs
-//
-package rpcmsg;
-
-message Header {
-  required string method = 1;
-  required bytes parameter = 2;
-}
