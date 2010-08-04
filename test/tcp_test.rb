@@ -7,8 +7,8 @@ class MessageServer
 end
 
 class ServerConnection
-  include Codec::Simple
   include Connection::Tcp
+  include Codec::Simple
 
   def self.test_harness=(obj)
     @@test_harness = obj
@@ -25,8 +25,8 @@ class MessageClient
 end
 
 class ClientConnection
-  include Codec::Simple
   include Connection::Tcp
+  include Codec::Simple
 
   def initialize(*args)
     super(*args)

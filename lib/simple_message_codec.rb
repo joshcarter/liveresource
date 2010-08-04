@@ -1,5 +1,19 @@
 module Codec
   module Simple
+    def initialize(*args)
+      super(*args)
+
+      unless respond_to?(:send_bytes)
+        # Client must override this method to send encoded message.
+        raise NotYetImplemented.new("Client must override Code::Simple#send_bytes")
+      end
+
+      unless respond_to?(:receive_message)
+        # Client must override this method to receive decoded message.
+        raise NotYetImplemented.new("Client must override Code::Simple#receive_message")
+      end
+    end
+
     # We prefix all messages with 4 bytes of size in network byte order.
     SIZE_BYTES = 4
 
@@ -15,16 +29,6 @@ module Codec
       end
 
       send_bytes [message_size, message].pack('Na*')
-    end
-
-    # Stub method that client must override to send encoded message.
-    def send_bytes(bytes)
-      raise NotYetImplemented.new("Client must override send_bytes")
-    end
-
-    # Stub method that client must override to receive decoded message.
-    def receive_message(message)
-      raise NotYetImplemented.new("Client must override receive_message")
     end
 
     # Receives a raw byte stream and decodes any messages contained within.

@@ -8,6 +8,10 @@ module Connection
       @socket = socket
       @parent = parent
       trace "initialize #{self.object_id}, parent #{parent.inspect}"
+
+      unless respond_to?(:receive_message)
+        raise NotYetImplemented.new("Client must override Connection#receive_message")
+      end
     end
 
     def trace(s)
@@ -22,10 +26,6 @@ module Connection
     def receive_bytes(bytes)
       trace "rx #{self.object_id}: #{bytes.size} bytes"
       super(bytes)
-    end
-
-    def receive_message(message)
-      raise NotYetImplemented.new("Client must override Connection.receive_message")
     end
 
     def close
