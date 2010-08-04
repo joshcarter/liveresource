@@ -10,8 +10,8 @@ module Server
       @thread = Thread.new { run }
     end
 
-    def trace(message)
-      puts message if true
+    def trace(s)
+      puts(s) if false
     end
 
     def run
@@ -41,7 +41,7 @@ module Server
 
                 if (bytes.empty?)
                   trace "connection closed from #{socket.peeraddr[2]}"
-                  connection.close_connection
+                  connection.close
                 else
                   connection.receive_bytes(bytes)
                 end

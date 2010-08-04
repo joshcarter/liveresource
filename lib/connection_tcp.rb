@@ -10,8 +10,8 @@ module Connection
       trace "initialize #{self.object_id}, parent #{parent.inspect}"
     end
 
-    def trace(message)
-      puts("  #{message}") if true
+    def trace(s)
+      puts("  #{s}") if false
     end
 
     def send_bytes(bytes)

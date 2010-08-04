@@ -1,6 +1,6 @@
 require 'rubygems'
 require 'test/unit'
-require 'simple_message_codec'
+require 'liveresource'
 
 # Class that just buffers sent messages
 class NullSender

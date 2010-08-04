@@ -1,8 +1,6 @@
 require 'rubygems'
 require 'test/unit'
-require 'server_tcp'
-require 'client_tcp'
-require 'simple_message_codec'
+require 'liveresource'
 
 class MessageServer
   include Server::Tcp
@@ -17,7 +15,6 @@ class ServerConnection
   end
 
   def receive_message(message)
-    puts "server: got ping"
     @@test_harness.assert_equal "ping", message
     send_message "pong"
   end
@@ -41,7 +38,6 @@ class ClientConnection
   end
 
   def receive_message(message)
-    puts "client: got pong"
     @@test_harness.assert_equal "pong", message
     @ponged = true
   end
