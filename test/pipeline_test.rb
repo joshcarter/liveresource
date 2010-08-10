@@ -1,4 +1,5 @@
 require 'test/unit'
+require 'md5'
 require 'pipeline'
 
 class PipelineTest < Test::Unit::TestCase
@@ -39,5 +40,17 @@ class PipelineTest < Test::Unit::TestCase
     assert_equal "ZABRAB", queue.pop
 
     p.stop
+  end
+
+  def test_pipeline_runs_in_correct_direction
+    collector = Queue.new
+    upcaser = lambda { |str| str.upcase }
+    md5er = lambda { |str| MD5.hexdigest(str) }
+    reverser = lambda { |str| str.reverse }
+    
+    p = Pipeline.new(upcaser, md5er, reverser, collector)
+
+    p << "foobar"
+    assert_equal "2834fcefcf220c06f95d884c94a27c59", collector.pop
   end
 end
