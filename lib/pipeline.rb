@@ -2,52 +2,27 @@ require 'task_handler'
 
 class Pipeline
   # Pipeline stages should be ordered from upstream to downstream
-  def initialize(*stages)
-    # Verify these are objects that will work in a pipeline
-    stages.each do |s|
-      next if (s.class == Proc)
-      raise(ArgumentError, "Pipleline stage #{s} does not respond to push") unless s.respond_to?(:push)
-      raise(ArgumentError, "Pipleline stage #{s} does not respond to pop") unless s.respond_to?(:pop)
+  def initialize(*procs)
+    @stages = Array.new
+
+    # If the last stage is a lambda, make a TaskHandler out of it. If it's
+    # not a proc, it must be something we can push to.
+    #
+    if procs.last.class == Proc
+      @stages.unshift task_handler_from(procs.last)
+    elsif procs.last.respond_to?(:push)
+      @stages.unshift procs.last
+    else
+      raise(ArgumentError, "Final stage must be a proc or respond to push")
     end
 
-    @stages = [Queue.new] + stages
-
-    (0...stages-1).to_a.reverse.each do |i|
-      stage1 = @stages[i]      # current stage
-      stage2 = @stages[i + 1]  # downstream stage
-
-      # If final stage is a proc, convert it to a unary task handler
-      if (stage2.class == Proc)
-        stage2 = TaskHandler.new { stage2 }
-        @stages[i + 1] = stage2
-      end
-    
-      if (stage1.class == Proc)
-        @stages[i] = TaskHandler.new do |work|
-          stage2.push stage1.call(work)
-        end
-      else
-        @stages[i] = TaskHandler.new do
-          stage2.push stage2.pop
-        end
-      end
+    # Construct stages in reverse order since each stage needs to have 
+    # a reference to its downstream stage.
+    #
+    procs[0..-2].reverse.each do |proc|
+      downstream = @stages.first
+      @stages.unshift task_handler_from(proc, downstream)
     end
-
-
-    stages.map_with_index do |stage, i|
-
-
-      if (i != stages.length - 1)
-        next_stage = 
-
-      if (stage.class == Proc)
-        TaskHandler.new { |proc| next_stage.push proc.call }
-      else
-        
-
-next_stage.push stage.pop }
-
-
   end
 
   def push(work)
@@ -57,6 +32,25 @@ next_stage.push stage.pop }
 
   def stop
     @stages.each { |s| s.stop if s.respond_to?(:stop) }
+  end
+
+  def length
+    @stages.length
+  end
+  
+  private
+
+  def task_handler_from(proc, downstream = nil)
+    if (proc.class != Proc)
+      raise(ArgumentError, "Pipleline stage #{proc} must be a lambda or Proc")
+    elsif (proc.arity != 1)
+      raise(ArgumentError, "Pipleline stage #{proc} needs to take one parameter")
+    end
+
+    TaskHandler.new do |work|
+      result = proc.call(work)
+      downstream.push(result) if downstream
+    end    
   end
 end
 
