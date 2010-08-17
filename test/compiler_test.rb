@@ -34,5 +34,9 @@ class ProtobufCompilerTest < Test::Unit::TestCase
 
     assert_raise(NotImplementedError) { fan.get_fan_status }
   end
+
+  def test_fails_to_require_nonpresent_file
+    assert_raise(ArgumentError) { require_resource 'file_that_does_not_exist' }
+  end
 end
 

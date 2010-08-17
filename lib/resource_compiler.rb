@@ -86,14 +86,20 @@ class ResourceCompiler
   def self.compile(file)
     file += ".proto"
 
-    # See if we've already compiled this proto
-    stat = File::Stat.new(file)
-    if @@compiled_protos.include?(stat)
-      return false
-    else
-      @@compiled_protos << stat
+    begin
+      stat = File::Stat.new(file)
+    rescue Exception => e
+      raise ArgumentError.new("Cannot compile #{file}: #{e}")
     end
 
+    # See if we've already compiled this proto
+    already_compiled = @@compiled_protos.find do |s|
+      s.equal? stat
+    end
+
+    return false if already_compiled
+
+    @@compiled_protos << stat
     Protobuf::Compiler.new.compile(File::basename(file), File::dirname(file), '', false)
     return true
   end
