@@ -1,5 +1,0 @@
---- 
-:protocol: tcp
-:type: queue_daemon
-:port: 7652
-:name: Test Queue
