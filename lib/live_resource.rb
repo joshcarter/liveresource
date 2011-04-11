@@ -11,7 +11,7 @@ class LiveResource
     @redis = Redis.new(*redis_params)
     @actions = {}
     @worker = nil
-    @trace = false
+    @trace = true
   end
 
   #
@@ -75,8 +75,8 @@ class LiveResource
     @actions[method.to_sym] = proc || block
   end
   
-  def run_worker
-    @worker = LiveResource::Worker.new(self, @actions)
+  def start_worker
+    @worker = LiveResource::Worker.new(self)
   end
   
   def stop_worker
@@ -84,18 +84,64 @@ class LiveResource
     @worker.stop
   end
   
-  def more_goes_here
-    
-    # Choose unique key for this action and store it
-    key = nil
+  def async_action(method, *params)
+    # Choose unique token for this action and store it
+    token = nil
     loop do
-      key = sprintf("%05d", Kernel.rand(100000))
-      break if hsetnx(key, :method, action[:method])
+      token = sprintf("%05d", Kernel.rand(100000))
+      break if hsetnx(token, :method, method)
     end
     
+    hsetnx(token, :params, *params) unless params.nil?
+    
+    @redis.lpush("#{@name}.actions", token)
+    
+    token
+  end
+  
+  # FIXME: clean up hash afterward
+  def action(method, *params)
+    token = async_action(method, params)
+    
+    # FIXME: don't poll
+    loop do
+      break if redis.hexists(hash_for(token), :result)
+      sleep 0.1
+    end
+    
+    result = hget(token, :result)
+    
+    if (result.is_a? Exception)
+      raise result.class.new(result.to_s)
+    else
+      result
+    end
   end
   
   def trace(s)
     puts("- #{@name}: #{s}") if @trace
+  end
+  
+  private
+  
+  def hash_for(token)
+    "#{@name}.actions.#{token}"
+  end
+  
+  def hsetnx(token, key, value)
+    trace("hsetnx #{hash_for(token)} #{key}: #{value}")
+    @redis.hsetnx(hash_for(token), key, YAML::dump(value))
+  end
+  
+  def hset(token, key, value)
+    trace("hset #{hash_for(token)} #{key}: #{value}")
+    @redis.hset(hash_for(token), key, YAML::dump(value))
+  end
+  
+  def hget(token, key)
+    trace("hget #{hash_for(token)} #{key}")
+    value = @redis.hget(hash_for(token), key)
+    trace(" -> #{value}")
+    YAML::load(value)
   end
 end

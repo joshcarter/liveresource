@@ -29,22 +29,38 @@ class LiveResource
         method = hget token, :method
         params = hget token, :params
         
-        if @actions.has_key? method
-          proc = @actions[method]
+        if !@actions.has_key?(method)
+          hset token, :result, NoMethorError.new("undefined method `#{method}' for worker")
+          next
+        end
+          
+        proc = @actions[method]
 
-          begin
-            value = proc.call(params)
-            hset token, :result, value
-          rescue Exception => e
-            hset token, :result, e
-          end
-        else
-          hset token, :result, 
-            RuntimeError.new("Worker does not respond to #{method}")
+        if (proc.arity != 0 && params.nil?)
+          hset token, :result, ArgumentError.new("wrong number of arguments to `#{method}' (0 for #{proc.arity})")
+          next
+        end
+        
+        if (proc.arity != params.length)
+          hset token, :result, ArgumentError.new("wrong number of arguments to `#{method}' (#{params.length} for #{proc.arity})")
+          next
+        end
+          
+        begin
+          value = proc.call(*params)
+          hset token, :result, value
+        rescue Exception => e
+          hset token, :result, e
         end
       end
       
       trace "Worker thread exiting"
+    end
+    
+    # TODO: ensure pushing thread is not the same as the blocked thread (Redis client will deadlock)
+    def stop
+      @redis.lpush "#{@name}.actions", EXIT_TOKEN
+      @thread.join
     end
     
     private
