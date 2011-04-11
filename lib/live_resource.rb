@@ -36,9 +36,7 @@ class LiveResource
         on.message do |channel, message|
           message = message.nil? ? nil : YAML::load(message)
           trace "##{channel}: #{message}"          
-          keep_going = block.call(message)    # FIXME: is this the right API?
-          
-          @redis.unsubscribe if !keep_going
+          block.call(message)
         end
         
         on.unsubscribe do |channel, subscriptions|
@@ -55,6 +53,10 @@ class LiveResource
     Thread.pass while !started
     
     thread
+  end
+  
+  def unsubscribe
+    @redis.unsubscribe
   end
   
 protected
