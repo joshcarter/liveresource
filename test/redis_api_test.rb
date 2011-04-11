@@ -6,11 +6,11 @@ require 'thread'
 class RedisApiTest < Test::Unit::TestCase
   def setup
     Redis.new.flushall
-    @@trace = false
+    @trace = false
   end
 
   def trace(s)
-    puts("- #{s}") if @@trace
+    puts("- #{s}") if @trace
   end
   
   def publisher(channel, quantity)

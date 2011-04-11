@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'redis'
+require 'yaml'
 
 class LiveResource
   attr_reader :name
@@ -7,31 +8,37 @@ class LiveResource
   def initialize(name, *redis_params)
     @name = name
     @redis = Redis.new(*redis_params)
+    @trace = false
   end
 
   def set(state)
+    state = YAML::dump(state)
+    
     @redis[@name] = state
     @redis.publish @name, state
   end
   
   def get
-    @redis[@name]
+    value = @redis[@name]
+    
+    value.nil? ? nil : YAML::load(value)
   end
   
   def subscribe(&block)
     started = false
     
     thread = Thread.new do
-      redis.subscribe(channel) do |on|
+      @redis.subscribe(@name) do |on|
         on.subscribe do |channel, subscriptions|
           trace "Subscribed to ##{channel} (#{subscriptions} subscriptions)"
         end
         
         on.message do |channel, message|
+          message = message.nil? ? nil : YAML::load(message)
           trace "##{channel}: #{message}"          
           keep_going = block.call(message)    # FIXME: is this the right API?
           
-          redis.unsubscribe if !keep_going
+          @redis.unsubscribe if !keep_going
         end
         
         on.unsubscribe do |channel, subscriptions|
@@ -53,6 +60,6 @@ class LiveResource
 protected
 
   def trace(s)
-    puts "- #{@name}: #{@s}"
+    puts("- #{@name}: #{s}") if @trace
   end
 end

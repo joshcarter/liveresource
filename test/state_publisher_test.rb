@@ -2,51 +2,62 @@ require 'live_resource'
 require 'test/unit'
 require 'thread'
 
+Thread.abort_on_exception = true
+
 class StatePublisherTest < Test::Unit::TestCase
   def setup
-    @state = LiveResource.new(:happy)   # FIXME: how do I tell the LR what its attribute should be called?
-                                        # - consider defining as aliases to get/set, vs. define_method()
+    Redis.new.flushall
+    @trace = false
   end
 
-  def test_true
-    true
-  end
-
-  def DISABLED_test_get_state
-    assert_equal :happy, @state.happiness
+  def trace(s)
+    puts("- #{s}") if @trace
   end
   
-  def DISABLED_test_subscribe_to_state
-    states = Queue.new
-    subscriber_started = false
-    subscriber_quit = Queue.new
-
-    subscriber = Thread.new do
+  def test_get_state
+    resource = LiveResource.new('test_get_state')
+    resource.set :foo
+    assert_equal :foo, resource.get
+  end
+  
+  def subscribe(name, states)
+    thread = Thread.new do
       trace "Subscriber started"
 
-      @state.subscribe(:happiness) do |new_state|
+      LiveResource.new(name).subscribe do |new_state|
         trace "Subscriber saw change to #{new_state}"
         states << new_state
-        break if (new_state == :sad)
+        
+        # Return true if we should keep going
+        new_state != :dead
       end
       
-      subscriber_started = true
-    
-      subscriber_quit.pop
       trace "Subscriber done"
     end
     
-    Thread.pass while !subscriber_started
+    sleep 0.1 # Give subscriber chance to start
+    thread
+  end
+  
+  def test_subscribe_to_state
+    resource = LiveResource.new('test_subscribe_to_state')
+    states = Queue.new
+
+    resource.set :ok  # Starting state
+
+    subscriber = subscribe('test_subscribe_to_state', states)
     
-    @state.happiness = :giddy
+    trace "Setting state (1)"
+    resource.set :warning
     
     Thread.pass while (states.length < 1)
 
-    @state.happiness = :sad
+    trace "Setting state (2)"
+    resource.set :dead
 
     subscriber.join
 
-    assert_equal :giddy, states.pop
-    assert_equal :sad, states.pop
+    assert_equal :warning, states.pop
+    assert_equal :dead, states.pop
   end
 end
