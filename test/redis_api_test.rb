@@ -28,6 +28,8 @@ class RedisApiTest < Test::Unit::TestCase
   end
     
   def subscriber(channel, quantity, messages)
+    started = false
+    
     thread = Thread.new do
       redis = Redis.new
 
@@ -48,19 +50,13 @@ class RedisApiTest < Test::Unit::TestCase
         end
 
         trace "Subscriber started"
-        thread.listening!
+        started = true
       end
 
       trace "Subscriber done"
     end
     
-    def thread.listening?
-      @listening
-    end
-
-    def thread.listening!
-      @listening = true
-    end
+    Thread.pass while !started
     
     thread
   end
@@ -69,9 +65,6 @@ class RedisApiTest < Test::Unit::TestCase
     messages = Queue.new
 
     subscriber = subscriber('test', 1, messages)
-    # Let subscriber get started
-    Thread.pass while !subscriber.listening?
-
     publisher = publisher('test', 1)
 
     publisher.join
