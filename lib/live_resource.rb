@@ -1,16 +1,22 @@
 require 'rubygems'
 require 'redis'
 require 'yaml'
+require File.join(File.dirname(__FILE__), 'live_resource', 'worker')
 
 class LiveResource
-  attr_reader :name
+  attr_reader :name, :redis, :actions, :trace
   
   def initialize(name, *redis_params)
     @name = name
     @redis = Redis.new(*redis_params)
+    @actions = {}
+    @worker = nil
     @trace = false
   end
 
+  #
+  # State maintenance
+  #
   def set(state)
     state = YAML::dump(state)
     
@@ -59,8 +65,36 @@ class LiveResource
     @redis.unsubscribe
   end
   
-protected
+  #
+  # Actions
+  #
+  def on(method, proc = nil, &block)
+    raise(RuntimeError, "must provide either a block or proc") if (proc.nil? && block.nil?)
+    raise(RuntimeError, "cannot provide both a block and a proc") if (proc && block)
 
+    @actions[method.to_sym] = proc || block
+  end
+  
+  def run_worker
+    @worker = LiveResource::Worker.new(self, @actions)
+  end
+  
+  def stop_worker
+    raise "No worker; cannot stop" if @worker.nil?
+    @worker.stop
+  end
+  
+  def more_goes_here
+    
+    # Choose unique key for this action and store it
+    key = nil
+    loop do
+      key = sprintf("%05d", Kernel.rand(100000))
+      break if hsetnx(key, :method, action[:method])
+    end
+    
+  end
+  
   def trace(s)
     puts("- #{@name}: #{s}") if @trace
   end
