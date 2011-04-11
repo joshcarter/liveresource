@@ -6,57 +6,78 @@ require 'thread'
 class RedisApiTest < Test::Unit::TestCase
   def setup
     Redis.new.flushall
+    @@trace = false
   end
 
   def trace(s)
-    puts("- #{s}") if false
+    puts("- #{s}") if @@trace
   end
   
-  def DISABLED_test_publish_subscribe
-    redis = Redis.new("localhost")
-    done = Queue.new
-    received = nil
-
-    trace "Starting subscriber"
+  def publisher(channel, quantity)
     Thread.new do
-      trace "Registering subscriber"
+      trace "Publisher started"
+      redis = Redis.new
+      
+      quantity.times do |i|
+        trace "Publishing..."
+        redis.publish(channel, "news #{i + 1}")
+      end
+      
+      trace "Publisher done"
+    end
+  end
+    
+  def subscriber(channel, quantity, messages)
+    thread = Thread.new do
+      redis = Redis.new
 
-      redis.subscribe('news') do |on|
+      redis.subscribe(channel) do |on|
         on.subscribe do |channel, subscriptions|
           trace "Subscribed to ##{channel} (#{subscriptions} subscriptions)"
         end
-
+        
         on.message do |channel, message|
           trace "##{channel}: #{message}"
-          if message == "exit"
-            redis.unsubscribe
-          else
-            received = message
-          end
+          messages << message
+          
+          redis.unsubscribe if (messages.length == quantity)
         end
-
+        
         on.unsubscribe do |channel, subscriptions|
           trace "Unsubscribed from ##{channel} (#{subscriptions} subscriptions)"
-          done << true
         end
-      end
-    end
-    
-    trace "Starting publisher"
-    Thread.new do
-      sleep 1
-      trace "Publishing first message"
-      redis.publish 'news', 'foo'
 
-      sleep 1
-      trace "Publishing exit message"
-      redis.publish 'news', 'exit'
+        trace "Subscriber started"
+        thread.listening!
+      end
+
+      trace "Subscriber done"
     end
     
-    trace "Waiting for done"
-    done.pop
-    trace "Done"
-    assert_equal 'foo', received
+    def thread.listening?
+      @listening
+    end
+
+    def thread.listening!
+      @listening = true
+    end
+    
+    thread
+  end
+  
+  def test_publish_subscribe
+    messages = Queue.new
+
+    subscriber = subscriber('test', 1, messages)
+    # Let subscriber get started
+    Thread.pass while !subscriber.listening?
+
+    publisher = publisher('test', 1)
+
+    publisher.join
+    subscriber.join
+
+    assert_equal 'news 1', messages.pop
   end
   
   def consume(list, quantity, values)
