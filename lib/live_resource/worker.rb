@@ -24,7 +24,7 @@ class LiveResource
         list, token = @redis.brpop "#{@name}.actions", 0
         trace "Worker thread popped token #{token}"
         
-        return if token == EXIT_TOKEN
+        break if token == EXIT_TOKEN
 
         method = hget token, :method
         params = hget token, :params
@@ -92,6 +92,7 @@ class LiveResource
     end
     
     def set_result(token, result)
+      trace(" result -> #{result}")
       @redis.lpush "#{@name}.results.#{token}", YAML::dump(result)
     end
 
