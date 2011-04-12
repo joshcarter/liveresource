@@ -43,19 +43,48 @@ class WorkerTest < Test::Unit::TestCase
     assert_equal "FOOBAR", YAML::load(redis.hget("foo.actions.1", "result"))
   end
   
-  # TODO: test with 0, 1, 2 parameter jobs
-  def test_action_api
-    r1 = LiveResource.new("foo")
-    r2 = LiveResource.new("foo")
+  def with_worker(name)
+    resource = LiveResource.new(name)
     
-    r1.on(:upcase) do |param|
-      param.upcase
+    resource.on(:meaning) do 
+      42
     end
 
-    r1.start_worker
-    
-    assert_equal "FOOBAR", r2.action(:upcase, "foobar")
-    
-    r1.stop_worker
+    resource.on(:upcase) do |str|
+      str.upcase
+    end
+
+    resource.on(:add) do |a, b|
+      a + b
+    end
+
+    resource.on(:reverse) do |arr|
+      arr.reverse
+    end
+
+    begin
+      resource.start_worker
+      yield
+    ensure
+      resource.stop_worker
+    end
+  end
+
+  def test_action_api
+    with_worker("foo") do
+      resource = LiveResource.new("foo")
+
+      # Zero parameters
+      assert_equal 42, resource.action(:meaning)
+
+      # One parameter (simple)
+      assert_equal "FOOBAR", resource.action(:upcase, "foobar")
+
+      # One parameter (complex)
+      assert_equal [3, 2, 1], resource.action(:reverse, [1, 2, 3])
+
+      # Two parameters
+      assert_equal 3, resource.action(:add, 1, 2)
+    end
   end
 end
