@@ -57,9 +57,11 @@ class LiveResource
       trace "Worker thread exiting"
     end
     
-    # TODO: ensure pushing thread is not the same as the blocked thread (Redis client will deadlock)
     def stop
-      @redis.lpush "#{@name}.actions", EXIT_TOKEN
+      # Create new Redis instance; if the stopping resource is the same
+      # instance as the worker, sharing the Redis connection would
+      # deadlock because it's already blocked in the brpop() above.
+      Redis.new.lpush "#{@name}.actions", EXIT_TOKEN
       @thread.join
     end
     

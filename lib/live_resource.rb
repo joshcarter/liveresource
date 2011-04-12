@@ -11,7 +11,7 @@ class LiveResource
     @redis = Redis.new(*redis_params)
     @actions = {}
     @worker = nil
-    @trace = true
+    @trace = false
   end
 
   #
@@ -80,7 +80,9 @@ class LiveResource
   end
   
   def stop_worker
+    # TODO: only the worker instance will have @worker set; another instance should be able to shut it down (I think?)
     raise "No worker; cannot stop" if @worker.nil?
+
     @worker.stop
   end
   

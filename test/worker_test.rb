@@ -56,6 +56,6 @@ class WorkerTest < Test::Unit::TestCase
     
     assert_equal "FOOBAR", r2.action(:upcase, "foobar")
     
-    r2.stop_worker
+    r1.stop_worker
   end
 end
