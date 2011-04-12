@@ -41,7 +41,11 @@ class LiveResource
           next
         end
         
-        if (proc.arity != params.length)
+        # Weirdness here: Ruby 1.8 appears to give a proc's arity() as -1
+        # in some cases where the proc really takes 0 parameters. In the
+        # case where it's -1 and params.length == 0, let that pass, the
+        # proc.call below will work.
+        if ((proc.arity != params.length) && (params.length != 0 && proc.arity != -1))
           hset token, :result, ArgumentError.new("wrong number of arguments to `#{method}' (#{params.length} for #{proc.arity})")
           next
         end

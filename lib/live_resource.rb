@@ -114,7 +114,7 @@ class LiveResource
     result = hget(token, :result)
     
     if (result.is_a? Exception)
-      raise result.class.new(result.to_s)
+      raise result.class.new(result.message)
     else
       result
     end
