@@ -18,9 +18,6 @@ gem_spec = Gem::Specification.new do |spec|
   spec.has_rdoc = false
   candidates = Dir.glob("{lib}/**/*")
   spec.files = candidates.delete_if {|c| c.match(/\.swp|\.svn|html|pkg/)}
-  spec.add_dependency('ruby_protobuf')
-  spec.add_dependency('dnssd')
-  spec.add_dependency('mocha')
 end
 
 gem = Rake::GemPackageTask.new(gem_spec) do |pkg|
