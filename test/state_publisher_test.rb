@@ -59,7 +59,7 @@ class StatePublisherTest < Test::Unit::TestCase
     subscriber.join
 
     assert_equal :warning, states.pop
-    assert_equal :dead, states.pop
+    assert_equal :dead, states.pop    
   end
   
   def test_unsubscribe_with_no_subscription
@@ -99,6 +99,10 @@ class StatePublisherTest < Test::Unit::TestCase
       resource.set "state #{i + 1}"
       Thread.pass if (i % 4) # Pass once in a while
     end
+
+    # Even though we have multiple subscribers, there should only 
+    # be one channel in Redis.
+    assert_equal 1, Redis.new.info["pubsub_channels"].to_i
     
     resource.set :dead
     
@@ -111,5 +115,8 @@ class StatePublisherTest < Test::Unit::TestCase
     assert_equal num_messages, states[0].length
     assert_equal num_messages, states[1].length
     assert_equal num_messages, states[num_subscribers - 1].length
+    
+    # Should have no junk left over in Redis
+    assert_equal 0, Redis.new.info["pubsub_channels"].to_i
   end
 end

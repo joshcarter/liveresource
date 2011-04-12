@@ -101,17 +101,13 @@ class LiveResource
     token
   end
   
-  # FIXME: clean up hash afterward
   def action(method, *params)
     token = async_action(method, params)
+
+    list, result = @redis.brpop "#{@name}.results.#{token}", 0
+    result = YAML::load(result)
     
-    # FIXME: don't poll
-    loop do
-      break if redis.hexists(hash_for(token), :result)
-      sleep 0.1
-    end
-    
-    result = hget(token, :result)
+    @redis.del(hash_for(token))
     
     if (result.is_a? Exception)
       raise result.class.new(result.message)

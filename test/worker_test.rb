@@ -15,7 +15,7 @@ class WorkerTest < Test::Unit::TestCase
     puts("- #{s}") if @trace
   end
 
-  def DISABLED_test_worker_feeds_from_redis
+  def test_worker_feeds_from_redis
     resource = LiveResource.new("foo")
     redis = Redis.new
     
@@ -26,21 +26,19 @@ class WorkerTest < Test::Unit::TestCase
     # NOTE: in normal use, application code would never create 
     # the worker directly, set stuff in Redis, etc.
     redis.hset "foo.actions.1", "method", YAML::dump(:upcase)
-    redis.hset "foo.actions.1", "params", YAML::dump("foobar")
+    redis.hset "foo.actions.1", "params", YAML::dump(["foobar"])
     redis.lpush "foo.actions", "1"
     redis.lpush "foo.actions", "exit"
     
     worker = LiveResource::Worker.new(resource)
     worker.main
 
-    # It appears that hset followed immediately by an hget may not 
-    # return the new value. Loop here for just a bit.
-    10.times do
-      break if redis.hkeys('foo.actions.1').include?('result')
-      sleep 0.1
-    end
+    list, result = redis.brpop "foo.results.1", 0
+    redis.del "foo.actions.1"
+    result = YAML::load(result)
 
-    assert_equal "FOOBAR", YAML::load(redis.hget("foo.actions.1", "result"))
+    assert_equal "FOOBAR", result
+    assert_equal nil, Redis.new.info["db0"]
   end
   
   def with_worker(name)
@@ -86,5 +84,21 @@ class WorkerTest < Test::Unit::TestCase
       # Two parameters
       assert_equal 3, resource.action(:add, 1, 2)
     end
+    
+    # Should have no junk left over in Redis
+    assert_equal nil, Redis.new.info["db0"]
+  end
+
+  def test_action_stress
+    with_worker("foo") do
+      resource = LiveResource.new("foo")
+      
+      100.times do
+        resource.action(:upcase, "foobar")
+      end
+    end
+    
+    # Should have no junk left over in Redis
+    assert_equal nil, Redis.new.info["db0"]
   end
 end

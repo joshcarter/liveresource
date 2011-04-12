@@ -30,14 +30,14 @@ class LiveResource
         params = hget token, :params
         
         if !@actions.has_key?(method)
-          hset token, :result, NoMethorError.new("undefined method `#{method}' for worker")
+          set_result token, NoMethorError.new("undefined method `#{method}' for worker")
           next
         end
           
         proc = @actions[method]
 
         if (proc.arity != 0 && params.nil?)
-          hset token, :result, ArgumentError.new("wrong number of arguments to `#{method}' (0 for #{proc.arity})")
+          set_result token, ArgumentError.new("wrong number of arguments to `#{method}' (0 for #{proc.arity})")
           next
         end
         
@@ -46,15 +46,14 @@ class LiveResource
         # case where it's -1 and params.length == 0, let that pass, the
         # proc.call below will work.
         if ((proc.arity != params.length) && (params.length != 0 && proc.arity != -1))
-          hset token, :result, ArgumentError.new("wrong number of arguments to `#{method}' (#{params.length} for #{proc.arity})")
+          set_result token, ArgumentError.new("wrong number of arguments to `#{method}' (#{params.length} for #{proc.arity})")
           next
         end
           
         begin
-          value = proc.call(*params)
-          hset token, :result, value
+          set_result token, proc.call(*params)
         rescue Exception => e
-          hset token, :result, e
+          set_result token, e
         end
       end
       
@@ -90,6 +89,10 @@ class LiveResource
       value = @redis.hget(hash_for(token), key)
       trace(" -> #{value}")
       YAML::load(value)
+    end
+    
+    def set_result(token, result)
+      @redis.lpush "#{@name}.results.#{token}", YAML::dump(result)
     end
 
     def trace(s)
