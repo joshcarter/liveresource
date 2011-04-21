@@ -82,6 +82,23 @@ class StatePublisherTest < Test::Unit::TestCase
     assert_equal 0, states.length
   end
   
+  def test_publish_eliminates_duplicates
+    resource = LiveResource.new('test_publish_eliminates_duplicates')
+    states = Queue.new
+    subscriber = subscribe('test_publish_eliminates_duplicates', states)
+
+    resource.set :foo
+    resource.set :foo
+    resource.set :foo
+
+    # Resource should only publish one instance of :foo
+    assert_equal 1, states.length
+    assert_equal :foo, states.pop
+
+    resource.set :dead
+    subscriber.join    
+  end
+  
   def test_multiple_subscribers
     resource = LiveResource.new('test_multiple_subscribers')
     num_subscribers = 5

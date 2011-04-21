@@ -20,6 +20,9 @@ class LiveResource
   #
   def set(state)
     state = YAML::dump(state)
+
+    # Don't publish duplicate states
+    return if (state == @redis[@name])    
     
     @redis[@name] = state
     @redis.publish @name, state
