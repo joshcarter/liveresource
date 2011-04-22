@@ -52,6 +52,11 @@ class WorkerTest < Test::Unit::TestCase
       str.upcase
     end
 
+    resource.on(:delayed_upcase) do |str|
+      10.times { Thread.pass }
+      str.upcase
+    end
+
     resource.on(:add) do |a, b|
       a + b
     end
@@ -68,9 +73,46 @@ class WorkerTest < Test::Unit::TestCase
     end
   end
 
-  def test_action_api
-    with_worker("foo") do
-      resource = LiveResource.new("foo")
+  def test_async_wait_for_done
+    with_worker('test_wait_for_done') do
+      resource = LiveResource.new('test_wait_for_done')
+      
+      token = resource.async_action(:delayed_upcase, 'foobar')
+      
+      assert_not_nil token
+      assert_equal false, resource.done_with?(token)
+
+      # Wait for valid result.
+      assert_equal 'FOOBAR', resource.wait_for_done(token)
+
+      # After waiting for done, resource doesn't know anything about
+      # the token anymore.
+      assert_raise(ArgumentError) do
+        resource.done_with?(:token)
+      end
+    end
+  end
+  
+  # Similar test to above, but in this case we don't wait for done until
+  # after we already know the action is done.
+  def test_wait_for_done_after_done
+    with_worker('test_wait_for_done_after_done') do
+      resource = LiveResource.new('test_wait_for_done_after_done')
+      
+      token = resource.async_action(:delayed_upcase, 'foobar')
+      
+      while !resource.done_with?(token)
+        Thread.pass
+      end
+      
+      # Result should be ready for us
+      assert_equal 'FOOBAR', resource.wait_for_done(token)
+    end
+  end
+
+  def test_synchronous_action
+    with_worker('test_synchronous_action') do
+      resource = LiveResource.new('test_synchronous_action')
 
       # Zero parameters
       assert_equal 42, resource.action(:meaning)
@@ -86,7 +128,27 @@ class WorkerTest < Test::Unit::TestCase
     end
     
     # Should have no junk left over in Redis
-    assert_equal nil, Redis.new.info["db0"]
+    assert_equal nil, Redis.new.info["db0"]   # TODO: better way to check for keys
+  end
+
+  def test_done_with_invalid_token
+    with_worker('test_done_with_invalid_token') do
+      resource = LiveResource.new('test_done_with_invalid_token')
+      
+      assert_raise(ArgumentError) do
+        resource.done_with?('not a valid token')
+      end      
+    end
+  end
+  
+  def test_no_matching_action
+    with_worker('test_no_matching_action') do
+      resource = LiveResource.new('test_no_matching_action')
+      
+      assert_raise(NoMethodError) do
+        resource.action(:invalid_method)
+      end
+    end
   end
 
   def test_action_stress

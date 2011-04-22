@@ -4,6 +4,13 @@ LiveResource
 This is an in-progress framework for resource discovery, operations, and
 notifications. I'll update this file when it's more fully baked.
 
+To-Do
+-----
+
+- Replace trace methods with logger.
+
+- Get exception results to return properly with message and (if possible) stack trace.
+
 References
 ----------
 

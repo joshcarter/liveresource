@@ -21,7 +21,9 @@ class LiveResource
       trace "Worker thread starting"
       
       loop do
-        list, token = @redis.brpop "#{@name}.actions", 0
+        @redis.del "#{@name}.action_in_progress"
+
+        token = @redis.brpoplpush "#{@name}.actions", "#{@name}.action_in_progress", 0
         trace "Worker thread popped token #{token}"
         
         break if token == EXIT_TOKEN
@@ -30,7 +32,7 @@ class LiveResource
         params = hget token, :params
         
         if !@actions.has_key?(method)
-          set_result token, NoMethorError.new("undefined method `#{method}' for worker")
+          set_result token, NoMethodError.new("undefined method `#{method}' for worker")
           next
         end
           
@@ -57,6 +59,7 @@ class LiveResource
         end
       end
       
+      @redis.del "#{@name}.action_in_progress"
       trace "Worker thread exiting"
     end
     
@@ -93,7 +96,13 @@ class LiveResource
     
     def set_result(token, result)
       trace(" result -> #{result}")
-      @redis.lpush "#{@name}.results.#{token}", YAML::dump(result)
+      if result.is_a? Exception
+        # YAML can't dump an exception properly, it loses the message 
+        # and stack trace. Save those separately.
+        @redis.lpush "#{@name}.results.#{token}", YAML::dump([result, result.message])
+      else
+        @redis.lpush "#{@name}.results.#{token}", YAML::dump(result)
+      end
     end
 
     def trace(s)
