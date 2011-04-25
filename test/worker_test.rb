@@ -5,6 +5,32 @@ require 'yaml'
 
 Thread.abort_on_exception = true
 
+class SampleWorker < LiveResource::Worker
+  remote_method :meaning, :upcase, :delayed_upcase, :add, :reverse
+
+  def meaning
+    42
+  end
+  
+  def upcase(str)
+    str.upcase
+  end
+  
+  def delayed_upcase(str)
+    10.times { Thread.pass }
+    str.upcase
+  end
+
+  def add(a, b)
+    a + b
+  end
+
+  def reverse(arr)
+    arr.reverse
+  end
+end
+
+
 class WorkerTest < Test::Unit::TestCase
   def setup
     Redis.new.flushall
@@ -14,59 +40,12 @@ class WorkerTest < Test::Unit::TestCase
   def trace(s)
     puts("- #{s}") if @trace
   end
-
-  def test_worker_feeds_from_redis
-    resource = LiveResource.new("foo")
-    redis = Redis.new
-    
-    resource.on(:upcase) do |param|
-      param.upcase
-    end
-
-    # NOTE: in normal use, application code would never create 
-    # the worker directly, set stuff in Redis, etc.
-    redis.hset "foo.actions.1", "method", YAML::dump(:upcase)
-    redis.hset "foo.actions.1", "params", YAML::dump(["foobar"])
-    redis.lpush "foo.actions", "1"
-    redis.lpush "foo.actions", "exit"
-    
-    worker = LiveResource::Worker.new(resource)
-    worker.main
-
-    list, result = redis.brpop "foo.results.1", 0
-    redis.del "foo.actions.1"
-    result = YAML::load(result)
-
-    assert_equal "FOOBAR", result
-    assert_equal nil, Redis.new.info["db0"]
-  end
   
   def with_worker(name)
     resource = LiveResource.new(name)
-    
-    resource.on(:meaning) do 
-      42
-    end
-
-    resource.on(:upcase) do |str|
-      str.upcase
-    end
-
-    resource.on(:delayed_upcase) do |str|
-      10.times { Thread.pass }
-      str.upcase
-    end
-
-    resource.on(:add) do |a, b|
-      a + b
-    end
-
-    resource.on(:reverse) do |arr|
-      arr.reverse
-    end
+    resource.worker = SampleWorker.new(resource)
 
     begin
-      resource.start_worker
       yield
     ensure
       resource.stop_worker

@@ -5,7 +5,7 @@ require File.join(File.dirname(__FILE__), 'live_resource', 'worker')
 
 class LiveResource
   attr_reader :name, :redis, :actions
-  attr_accessor :trace
+  attr_accessor :trace, :worker
   
   # call-seq:
   #   LiveResource.new(name, redis_params = nil) -> LiveResource

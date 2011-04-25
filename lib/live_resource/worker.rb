@@ -6,7 +6,6 @@ class LiveResource
       @resource = resource
       @name = resource.name
       @redis = resource.redis
-      @actions = resource.actions
       @thread = Thread.new { self.main }
     end
 
@@ -19,6 +18,7 @@ class LiveResource
     
     def main
       trace "Worker thread starting"
+      event_hooks(:start)
       
       loop do
         @redis.del "#{@name}.action_in_progress"
@@ -28,37 +28,39 @@ class LiveResource
         
         break if token == EXIT_TOKEN
 
-        method = hget token, :method
+        method_name = hget token, :method
         params = hget token, :params
         
-        if !@actions.has_key?(method)
-          set_result token, NoMethodError.new("undefined method `#{method}' for worker")
-          next
+        method_symbol = self.class.instance_eval do
+          @event_hooks[:remote_method] &&
+          @event_hooks[:remote_method].find { |m| m == method_name }
         end
-          
-        proc = @actions[method]
 
-        if (proc.arity != 0 && params.nil?)
-          set_result token, ArgumentError.new("wrong number of arguments to `#{method}' (0 for #{proc.arity})")
+        if method_symbol.nil?
+          set_result token, NoMethodError.new("undefined method `#{method_name}' for worker")
           next
         end
         
-        # Weirdness here: Ruby 1.8 appears to give a proc's arity() as -1
-        # in some cases where the proc really takes 0 parameters. In the
-        # case where it's -1 and params.length == 0, let that pass, the
-        # proc.call below will work.
-        if ((proc.arity != params.length) && (params.length != 0 && proc.arity != -1))
-          set_result token, ArgumentError.new("wrong number of arguments to `#{method}' (#{params.length} for #{proc.arity})")
+        method = method(method_symbol)
+        
+        if (method.arity != 0 && params.nil?)
+          set_result token, ArgumentError.new("wrong number of arguments to `#{method_name}' (0 for #{method.arity})")
+          next
+        end
+        
+        if (method.arity != params.length)
+          set_result token, ArgumentError.new("wrong number of arguments to `#{method_name}' (#{params.length} for #{method.arity})")
           next
         end
           
         begin
-          set_result token, proc.call(*params)
+          set_result token, method.call(*params)
         rescue Exception => e
           set_result token, e
         end
       end
       
+      event_hooks(:stop)
       @redis.del "#{@name}.action_in_progress"
       trace "Worker thread exiting"
     end
@@ -71,7 +73,32 @@ class LiveResource
       @thread.join
     end
     
-    private
+    singleton_class = class << self; self; end
+
+    # Create event hook methods like on_start, on_stop, etc..
+    singleton_class.class_eval do
+      [:on_start, :on_stop, :remote_method].each do |event|
+        define_method(event) do |*method_names|
+          @event_hooks ||= Hash.new
+          @event_hooks[event] ||= []
+          @event_hooks[event] += method_names
+        end
+      end
+    end
+    
+  private
+  
+    def event_hooks(event)
+      instance = self # Instance needed below
+
+      self.class.instance_eval do
+        methods = @event_hooks[event]
+
+        return if methods.nil?
+
+        methods.each { |m| instance.send(m) }
+      end
+    end
   
     def hash_for(token)
       "#{@name}.actions.#{token}"

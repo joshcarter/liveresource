@@ -9,7 +9,13 @@ To-Do
 
 - Replace trace methods with logger.
 
-- Get exception results to return properly with message and (if possible) stack trace.
+- Lots of duplication between worker and LR, need to merge worker into LR or maybe extract Redis interactions into its own class.
+
+- Finish rdoc, test to make sure it looks right.
+
+- Meaningful examples, e.g. iostat.
+
+
 
 References
 ----------
