@@ -100,37 +100,6 @@ class LiveResource
       end
     end
   
-    def hash_for(token)
-      "#{@name}.actions.#{token}"
-    end
-    
-    def hsetnx(token, key, value)
-      trace("hsetnx #{hash_for(token)} #{key}: #{value}")
-      @redis.hsetnx(hash_for(token), key, YAML::dump(value))
-    end
-    
-    def hset(token, key, value)
-      trace("hset #{hash_for(token)} #{key}: #{value}")
-      @redis.hset(hash_for(token), key, YAML::dump(value))
-    end
-    
-    def hget(token, key)
-      trace("hget #{hash_for(token)} #{key}")
-      value = @redis.hget(hash_for(token), key)
-      trace(" -> #{value}")
-      YAML::load(value)
-    end
-    
-    def set_result(token, result)
-      trace(" result -> #{result}")
-      if result.is_a? Exception
-        # YAML can't dump an exception properly, it loses the message 
-        # and stack trace. Save those separately.
-        @redis.lpush "#{@name}.results.#{token}", YAML::dump([result, result.message])
-      else
-        @redis.lpush "#{@name}.results.#{token}", YAML::dump(result)
-      end
-    end
 
     def trace(s)
       @resource.trace(s)

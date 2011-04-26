@@ -3,6 +3,7 @@ require 'redis'
 require 'test/unit'
 require 'thread'
 
+# These tests verify assumptions about the Redis APIs.
 class RedisApiTest < Test::Unit::TestCase
   def setup
     Redis.new.flushall
