@@ -8,6 +8,7 @@ class FavoriteColorServer
   include LiveResource::Attribute
   
   remote_writer :color
+  remote_accessor :foo, :bar
   
   def initialize
     initialize_resource "colors.favorite"
@@ -41,25 +42,38 @@ end
 class SimpleResourceTest < Test::Unit::TestCase
   def setup
     Redis.new.flushall
+
+    @client = FavoriteColorClient.new
+    @server = FavoriteColorServer.new
   end
   
   def test_accessors_defined
-    assert FavoriteColorServer.new.respond_to? :color=
-    assert FavoriteColorClient.new.respond_to? :color
+    assert @client.respond_to? :color
+    assert @server.respond_to? :color=
   end
 
-  def test_simple_reader
-    client = FavoriteColorClient.new
-    server = FavoriteColorServer.new
+  def test_simple_read_write
+    assert_equal nil, @client.color
     
-    assert_equal nil, client.color
-    
-    thread = server.start
+    thread = @server.start
   
-    assert_equal 'blue', client.color
+    assert_equal 'blue', @client.color
     sleep 0.2
-    assert_equal 'green', client.color
+    assert_equal 'green', @client.color
     
     thread.join
+  end
+  
+  def test_accessor
+    assert @server.respond_to? :foo
+    assert @server.respond_to? :foo=
+    assert @server.respond_to? :bar
+    assert @server.respond_to? :bar=
+
+    @server.foo = 'foo'
+    assert_equal 'foo', @server.foo
+    
+    @server.bar = @server.foo
+    assert_equal 'foo', @server.bar
   end
 end
