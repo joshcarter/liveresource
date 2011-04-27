@@ -4,12 +4,22 @@ LiveResource
 This is an in-progress framework for resource discovery, operations, and
 notifications. I'll update this file when it's more fully baked.
 
+Goals
+-----
+
+Terminology -- familiar to Ruby users, not coming from another paradigm like RMI or actors.
+
+
 To-Do
 -----
 
+
+
+
+
 - Replace trace methods with logger.
 
-- Lots of duplication between worker and LR, need to merge worker into LR or maybe extract Redis interactions into its own class.
++ Lots of duplication between worker and LR, need to merge worker into LR or maybe extract Redis interactions into its own class.
 
 - Finish rdoc, test to make sure it looks right.
 

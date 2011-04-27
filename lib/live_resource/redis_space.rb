@@ -12,6 +12,29 @@ module LiveResource
       @redis = Redis.new(*redis_params)
       initialize_logger(logger)
     end
+    
+    def attribute_set(key, value)
+      key = "#{@namespace}.#{key}"
+      value = YAML::dump(value)
+
+      # Don't publish duplicate states
+      return if (value == @redis[key])    
+
+      debug "set", key, value
+      @redis[key] = value
+
+      debug "publish", key, value
+      @redis.publish key, value
+
+      value
+    end
+    
+    def attribute_get(key)
+      value = @redis["#{@namespace}.#{key}"]
+      debug "get", key, value
+
+      value.nil? ? nil : YAML::load(value)
+    end
 
     def method_set_exclusive(token, key, value)
       params = ["#{@namespace}.methods.#{token}", key, serialize(value)]

@@ -3,6 +3,8 @@ require 'logger'
 module LiveResource
   module LogHelper
     def initialize_logger(logger = nil)
+      return unless @logger.nil? # Don't double-init LogHelper
+      
       @logger = logger
       
       if logger.nil?
