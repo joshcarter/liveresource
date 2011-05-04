@@ -60,6 +60,16 @@ module LiveResource
       debug "lpush", params
       @redis.lpush *params
     end
+
+    def subscribe(keys, &block)
+      keys = keys.map { |key| "#{@namespace}.#{key}"}
+      
+      @redis.subscribe(*keys, &block)
+    end
+    
+    def unsubscribe
+      @redis.unsubscribe
+    end
     
   private
   
