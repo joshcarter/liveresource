@@ -24,10 +24,26 @@ class StatePublisherTest < Test::Unit::TestCase
     resource = LiveResource.new('test_expiring_state')
     resource.set :foo, :ttl => 1
     assert_equal :foo, resource.get
-    sleep 1.5
+    sleep 2
     assert_equal nil, resource.get
   end
 
+  def test_expiring_state_renews_correctly
+    resource = LiveResource.new('test_expiring_state_renews_correctly')
+
+		# Each set should renew the key's TTL
+    resource.set :foo, :ttl => 1
+    sleep 0.5
+    assert_equal :foo, resource.get
+
+    resource.set :foo, :ttl => 1
+    sleep 0.5
+    assert_equal :foo, resource.get
+
+    resource.set :foo, :ttl => 1
+    sleep 0.5
+    assert_equal :foo, resource.get
+  end
   
   def subscribe(name, states)
     thread = Thread.new do
