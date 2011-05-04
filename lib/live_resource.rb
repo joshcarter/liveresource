@@ -18,11 +18,15 @@ class LiveResource
   #
   # State maintenance
   #
-  def set(state)
+  def set(state, opts = {})
     state = YAML::dump(state)
     
     @redis[@name] = state
     @redis.publish @name, state
+
+    if opts[:ttl]
+      @redis.expire @name, opts[:ttl]
+    end
   end
   
   def get

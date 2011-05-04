@@ -19,6 +19,15 @@ class StatePublisherTest < Test::Unit::TestCase
     resource.set :foo
     assert_equal :foo, resource.get
   end
+
+  def test_expiring_state
+    resource = LiveResource.new('test_expiring_state')
+    resource.set :foo, :ttl => 1
+    assert_equal :foo, resource.get
+    sleep 1.5
+    assert_equal nil, resource.get
+  end
+
   
   def subscribe(name, states)
     thread = Thread.new do
