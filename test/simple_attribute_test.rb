@@ -1,8 +1,4 @@
-require 'live_resource'
-require 'test/unit'
-require 'thread'
-
-Thread.abort_on_exception = true
+require File.join(File.dirname(__FILE__), 'test_helper')
 
 class FavoriteColorServer
   include LiveResource::Attribute

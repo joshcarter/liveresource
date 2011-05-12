@@ -1,8 +1,4 @@
-require 'live_resource'
-require 'test/unit'
-require 'thread'
-
-Thread.abort_on_exception = true
+require File.join(File.dirname(__FILE__), 'test_helper')
 
 class UserLogin
   include LiveResource::Attribute
@@ -15,22 +11,17 @@ class UserLogin
   end
   
   def start
-    ready = Queue.new
-
-    thread = Thread.new do
-      user_logged_in = "Bob"
-      user_logged_in = "Fred"
-      user_logged_out = "Fred"
+    Thread.new do
+      self.user_logged_in = "Bob"
+      self.user_logged_in = "Fred"
+      self.user_logged_out = "Fred"
 
       sleep 0.1
 
-      user_logged_in = "Susan"
-      user_logged_out = "Bob"
-      user_logged_out = "Susan"
+      self.user_logged_in = "Susan"
+      self.user_logged_out = "Bob"
+      self.user_logged_out = "Susan"
     end
-    
-    ready.pop
-    thread
   end
 end
 
@@ -67,6 +58,20 @@ class AuditLog
 end
 
 class AttributeSubscriberTest < Test::Unit::TestCase
+  def test_attribute_publishes_to_redis
+    # Setting attribute should both send a set and publish to Redis.
+    redis = Redis.new
+    redis.expects(:set).once
+    redis.expects(:publish).once
+    Redis.expects(:new).returns(redis)
+    
+    rs = LiveResource::RedisSpace.new("mock")
+    LiveResource::RedisSpace.expects(:new).returns(rs)
+    
+    UserLogin.new("foo").user_logged_in = "Bob"
+  end
+  
+  
   def test_subscriber_receives_events
     login = UserLogin.new("users")
     audit_log = AuditLog.new("users")
@@ -77,6 +82,13 @@ class AttributeSubscriberTest < Test::Unit::TestCase
     sleep 0.25
     audit_log.unsubscribe
     
-    audit_log.dump.each { |line| puts line }
+    # This sequence should match what's in UserLogin.start
+    audit_log = audit_log.dump
+    assert_match "User Bob logged in", audit_log[0]
+    assert_match "User Fred logged in", audit_log[1]
+    assert_match "User Fred logged out", audit_log[2]
+    assert_match "User Susan logged in", audit_log[3]
+    assert_match "User Bob logged out", audit_log[4]
+    assert_match "User Susan logged out", audit_log[5]
   end
 end

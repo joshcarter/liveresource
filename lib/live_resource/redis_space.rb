@@ -64,10 +64,19 @@ module LiveResource
     def subscribe(keys, &block)
       keys = keys.map { |key| "#{@namespace}.#{key}"}
       
+      debug "subscribe #{keys.inspect}"
       @redis.subscribe(*keys, &block)
     end
     
+    def publish(key, value)
+      key = "#{@namespace}.#{key}"
+
+      debug "publish #{key} -> #{value}"
+      @redis.publish(key, value)
+    end
+    
     def unsubscribe
+      debug "unsubscribe"
       @redis.unsubscribe
     end
     

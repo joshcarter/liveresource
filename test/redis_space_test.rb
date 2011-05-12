@@ -1,5 +1,4 @@
-require 'live_resource'
-require 'test/unit'
+require File.join(File.dirname(__FILE__), 'test_helper')
 
 class FancyClass
   attr_reader :value

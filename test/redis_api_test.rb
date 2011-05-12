@@ -1,7 +1,4 @@
-require 'rubygems'
-require 'redis'
-require 'test/unit'
-require 'thread'
+require File.join(File.dirname(__FILE__), 'test_helper')
 
 # These tests verify assumptions about the Redis APIs.
 class RedisApiTest < Test::Unit::TestCase
