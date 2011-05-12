@@ -5,6 +5,7 @@ class UserLogin
   
   remote_writer :user_logged_in
   remote_writer :user_logged_out
+  remote_writer :sudo
   
   def initialize(name)
     initialize_resource name
@@ -18,6 +19,7 @@ class UserLogin
 
       sleep 0.1
 
+      self.sudo = ["Bob", "rm"]
       self.user_logged_in = "Susan"
       self.user_logged_out = "Bob"
       self.user_logged_out = "Susan"
@@ -47,8 +49,8 @@ class AuditLog
     @logger.info "User #{user} logged out"
   end
   
-  def sudo(user, command)
-    @logger.info "User #{user} ran #{command} as superuser"
+  def sudo(params)
+    @logger.info "User #{params[0]} ran #{params[1]} as superuser"
   end
   
   def dump
@@ -87,8 +89,9 @@ class AttributeSubscriberTest < Test::Unit::TestCase
     assert_match "User Bob logged in", audit_log[0]
     assert_match "User Fred logged in", audit_log[1]
     assert_match "User Fred logged out", audit_log[2]
-    assert_match "User Susan logged in", audit_log[3]
-    assert_match "User Bob logged out", audit_log[4]
-    assert_match "User Susan logged out", audit_log[5]
+    assert_match "User Bob ran rm as superuser", audit_log[3]
+    assert_match "User Susan logged in", audit_log[4]
+    assert_match "User Bob logged out", audit_log[5]
+    assert_match "User Susan logged out", audit_log[6]
   end
 end
