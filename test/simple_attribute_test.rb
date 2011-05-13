@@ -7,7 +7,7 @@ class FavoriteColorServer
   remote_accessor :foo, :bar
   
   def initialize
-    initialize_resource "colors.favorite"
+    self.namespace = "colors.favorite"
   end
   
   def start
@@ -31,7 +31,7 @@ class FavoriteColorClient
   remote_reader :color
     
   def initialize
-    initialize_resource "colors.favorite"
+    self.namespace = "colors.favorite"
   end
 end
 

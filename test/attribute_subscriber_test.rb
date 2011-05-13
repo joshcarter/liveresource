@@ -8,7 +8,7 @@ class UserLogin
   remote_writer :sudo
   
   def initialize(name)
-    initialize_resource name
+    self.namespace = name
   end
   
   def start
@@ -35,27 +35,26 @@ class AuditLog
   remote_subscription :sudo # Implies method name
 
   def initialize(name)
-    @file = StringIO.new("", "r+")
-    @logger = Logger.new(@file)
-    
-    initialize_resource name
+    @backing_store = StringIO.new("", "r+")
+    @audit_log = Logger.new(@backing_store)
+    self.namespace = name
   end
   
   def login(user)
-    @logger.info "User #{user} logged in"
+    @audit_log.info "User #{user} logged in"
   end
   
   def logout(user)
-    @logger.info "User #{user} logged out"
+    @audit_log.info "User #{user} logged out"
   end
   
   def sudo(params)
-    @logger.info "User #{params[0]} ran #{params[1]} as superuser"
+    @audit_log.info "User #{params[0]} ran #{params[1]} as superuser"
   end
   
   def dump
-    @file.rewind
-    @file.readlines
+    @backing_store.rewind
+    @backing_store.readlines
   end
 end
 

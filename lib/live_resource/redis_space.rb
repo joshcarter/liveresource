@@ -6,11 +6,29 @@ require File.join(File.dirname(__FILE__), 'log_helper')
 module LiveResource
   class RedisSpace
     include LogHelper
+    attr_writer :redis
     
-    def initialize(namespace, logger = nil, *redis_params)
+    def initialize(namespace, logger = nil, redis = Redis.new)
       @namespace = namespace
-      @redis = Redis.new(*redis_params)
-      initialize_logger(logger)
+      @redis = redis
+      self.logger = logger if logger
+
+      debug "RedisSpace created for namespace #{namespace.inspect}, Redis #{redis.inspect}"
+    end
+    
+    def clone
+      client = @saved_redis_client ? @saved_redis_client : @redis.client
+      
+      # Create independent Redis
+      new_redis = Redis.new(
+        :host => client.host,
+        :port => client.port,
+        :timeout => client.timeout,
+        :logger => client.logger,
+        :password => client.password,
+        :db => client.db)
+      
+      RedisSpace.new(@namespace, self.logger, new_redis)
     end
     
     def attribute_set(key, value)
@@ -36,6 +54,29 @@ module LiveResource
       value.nil? ? nil : YAML::load(value)
     end
 
+    def subscribe(keys, &block)
+      @saved_redis_client = @redis.client
+
+      keys = keys.map { |key| "#{@namespace}.#{key}"}
+      
+      debug "subscribe #{keys.inspect}"
+      @redis.subscribe(*keys, &block)
+    end
+    
+    def publish(key, value)
+      key = "#{@namespace}.#{key}"
+
+      debug "publish #{key} -> #{value}"
+      @redis.publish(key, value)
+    end
+    
+    def unsubscribe
+      @saved_redis_client = nil
+      
+      debug "unsubscribe"
+      @redis.unsubscribe
+    end
+    
     def method_set_exclusive(token, key, value)
       params = ["#{@namespace}.methods.#{token}", key, serialize(value)]
       debug "hsetnx", params
@@ -61,25 +102,6 @@ module LiveResource
       @redis.lpush *params
     end
 
-    def subscribe(keys, &block)
-      keys = keys.map { |key| "#{@namespace}.#{key}"}
-      
-      debug "subscribe #{keys.inspect}"
-      @redis.subscribe(*keys, &block)
-    end
-    
-    def publish(key, value)
-      key = "#{@namespace}.#{key}"
-
-      debug "publish #{key} -> #{value}"
-      @redis.publish(key, value)
-    end
-    
-    def unsubscribe
-      debug "unsubscribe"
-      @redis.unsubscribe
-    end
-    
   private
   
     def serialize(value)

@@ -1,21 +1,10 @@
-require File.join(File.dirname(__FILE__), 'log_helper')
-require File.join(File.dirname(__FILE__), 'redis_space')
+require File.join(File.dirname(__FILE__), 'base')
 
 module LiveResource
   module Subscriber
+    include LiveResource::Base
+    
     UNSUBSCRIBE_KEY = :unsubscribe_key
-
-    # include LogHelper # FIXME
-
-    def initialize_resource(namespace, logger = nil, *redis_params)
-      # logger ||= Logger.new(STDOUT)  # FIXME
-      # logger.level = Logger::DEBUG
-      
-      @namespace = namespace
-      @rs = RedisSpace.new(namespace, logger, *redis_params)
-      @rs_secondary = RedisSpace.new(namespace, logger, *redis_params)
-      # initialize_logger(logger) # FIXME
-    end
 
     def subscribe
       ready = false
@@ -23,12 +12,12 @@ module LiveResource
       channels = [UNSUBSCRIBE_KEY] + subscriptions.keys
 
       @thread = Thread.new do
-        @rs.subscribe(channels) do |on|
+        redis_space.subscribe(channels) do |on|
           on.subscribe do |key, total|
-            puts "Subscribed to #{key} (#{total} subscriptions)"
+            debug "Subscribed to #{key} (#{total} subscriptions)"
 
             if (channels.length == total)
-              puts "Subscriber ready"
+              debug "Subscriber ready"
               ready = true
             end
           end
@@ -44,10 +33,10 @@ module LiveResource
             # De-serialize value
             new_value = new_value.nil? ? nil : YAML::load(new_value)
 
-            puts "#{key.inspect} changed value to #{new_value.inspect}"
+            debug "#{key.inspect} changed value to #{new_value.inspect}"
             
             if key.to_s.end_with? UNSUBSCRIBE_KEY.to_s
-              @rs.unsubscribe
+              redis_space.unsubscribe
               next
             end
             
@@ -62,13 +51,13 @@ module LiveResource
           end
 
           on.unsubscribe do |key, total|
-            puts "Unsubscribed from #{key} (#{total} subscriptions)"
+            debug "Unsubscribed from #{key} (#{total} subscriptions)"
           end
 
-          puts "Subscriber thread started"
+          debug "Subscriber thread started"
         end
 
-        puts "Subscriber thread done"
+        debug "Subscriber thread done"
       end
 
       Thread.pass while !ready
@@ -79,6 +68,7 @@ module LiveResource
     def unsubscribe
       # Need to publish on secondary RedisSpace because the first one is
       # blocked waiting for subscription updates.
+      @rs_secondary = redis_space.clone
       @rs_secondary.publish UNSUBSCRIBE_KEY, true
       @thread.join
     end
