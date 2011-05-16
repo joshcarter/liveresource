@@ -59,6 +59,10 @@ class AuditLog
 end
 
 class AttributeSubscriberTest < Test::Unit::TestCase
+  def setup
+    Redis.new.flushall
+  end
+  
   def test_attribute_publishes_to_redis
     # Setting attribute should both send a set and publish to Redis.
     redis = Redis.new
@@ -71,7 +75,6 @@ class AttributeSubscriberTest < Test::Unit::TestCase
     
     UserLogin.new("foo").user_logged_in = "Bob"
   end
-  
   
   def test_subscriber_receives_events
     login = UserLogin.new("users")
