@@ -12,19 +12,19 @@ Terminology -- familiar to Ruby users, not coming from another paradigm like RMI
 To-Do
 -----
 
-- Enhance remote_writer to allow specification of options (e.g. TTL), something like:
+Enhance remote_writer to allow specification of options (e.g. TTL), something like:
 
     class C
       include LiveResource::Attribute
 
       # Existing list notation
       remote_writer :foo, :bar
-      
+  
       # Symbol, Hash implies single attribute with options
       remote_writer :baz, :ttl => 10
     end
 
-- Enhance subscriber notation, use hash for options:
+Enhance subscriber notation, use hash for options:
 
     class C
       include LiveResource::Subscriber
@@ -38,10 +38,10 @@ To-Do
       remote_subscription :baz => :method
     end
 
-- Port all tests from old/state_publisher_test.rb.
+Port all tests from old/state_publisher_test.rb.
 
-- Finish rdoc, test to make sure it looks right.
+Finish rdoc, test to make sure it looks right.
 
-- Meaningful examples, e.g. iostat.
+Meaningful examples, e.g. iostat.
 
 
