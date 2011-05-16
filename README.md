@@ -9,29 +9,39 @@ Goals
 
 Terminology -- familiar to Ruby users, not coming from another paradigm like RMI or actors.
 
-
 To-Do
 -----
 
+- Enhance remote_writer to allow specification of options (e.g. TTL), something like:
 
+    class C
+      include LiveResource::Attribute
 
+      # Existing list notation
+      remote_writer :foo, :bar
+      
+      # Symbol, Hash implies single attribute with options
+      remote_writer :baz, :ttl => 10
+    end
 
+- Enhance subscriber notation, use hash for options:
 
-- Replace trace methods with logger.
+    class C
+      include LiveResource::Subscriber
 
-+ Lots of duplication between worker and LR, need to merge worker into LR or maybe extract Redis interactions into its own class.
+      # List of symbols implies subscription with callback methods 
+      # of the same name.
+      remote_subscription :foo, :bar
+      
+      # Hash (or list of hashes) implies subscriptions with callback
+      # methods explicitly specified.
+      remote_subscription :baz => :method
+    end
+
+- Port all tests from old/state_publisher_test.rb.
 
 - Finish rdoc, test to make sure it looks right.
 
 - Meaningful examples, e.g. iostat.
 
 
-
-References
-----------
-
-* [Google Protocol Buffers docs][1]
-* [Protocol Buffers for Ruby][2]
-
-[1]: http://code.google.com/apis/protocolbuffers/docs/proto.html
-[2]: http://code.google.com/p/ruby-protobuf/
