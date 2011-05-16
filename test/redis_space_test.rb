@@ -45,4 +45,60 @@ class RedisSpaceTest < Test::Unit::TestCase
     assert_equal true, rs.method_set_exclusive(1, 'key', 'value 1')
     assert_equal false, rs.method_set_exclusive(1, 'key', 'value 2')
   end
+  
+  def test_method_push_pop_simple
+    rs = LiveResource::RedisSpace.new('test')
+    assert_equal 0, Redis.new.dbsize
+    
+    rs.method_push '1'
+    assert_equal 1, Redis.new.dbsize
+
+    token = rs.method_wait
+    assert_equal '1', token
+    
+    rs.method_done token
+    assert_equal 0, Redis.new.dbsize    
+  end
+  
+  def test_method_push_pop_multiple
+    rs = LiveResource::RedisSpace.new('test')
+    assert_equal 0, Redis.new.dbsize
+    
+    rs.method_push '1'
+    rs.method_push '2'
+    rs.method_push '3'
+    
+    assert_equal ['3', '2', '1'], rs.method_tokens_waiting
+    assert_equal [], rs.method_tokens_in_progress
+
+    assert_equal '1', rs.method_wait
+    assert_equal '2', rs.method_wait
+    assert_equal '3', rs.method_wait
+
+    assert_equal [], rs.method_tokens_waiting
+    assert_equal ['3', '2', '1'], rs.method_tokens_in_progress
+
+    # Redis should have one key here (the methods_in_progress list)
+    assert_equal 1, Redis.new.dbsize
+
+    # Now start marking methods done; after the last one, the key 
+    # count should go down to zero.
+    rs.method_done '1'
+    assert_equal 1, Redis.new.dbsize
+    rs.method_done '2'
+    assert_equal 1, Redis.new.dbsize
+    rs.method_done '3'
+    assert_equal 0, Redis.new.dbsize    
+  end
+  
+  def test_serializes_exceptions_properly
+    rs = LiveResource::RedisSpace.new('test')
+
+    rs.result_set('1', RuntimeError.new('foo'))    
+    result = rs.result_get '1'
+    
+    assert_equal RuntimeError, result.class
+    assert_equal 'foo', result.message
+  end
 end
+

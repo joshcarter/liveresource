@@ -2,7 +2,7 @@ require File.join(File.dirname(__FILE__), 'log_helper')
 require File.join(File.dirname(__FILE__), 'redis_space')
 
 module LiveResource
-  module Base
+  module Common
     include LogHelper
 
     attr_accessor :namespace

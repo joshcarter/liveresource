@@ -13,6 +13,8 @@ module LiveResource
       @redis = redis
       self.logger = logger if logger
 
+      # TODO: initialize namespace with something like PID if it's nil.
+
       debug "RedisSpace created for namespace #{namespace.inspect}, Redis #{redis.inspect}"
     end
     
@@ -77,6 +79,40 @@ module LiveResource
       @redis.unsubscribe
     end
     
+    def method_push(token)
+      params = ["#{@namespace}.methods", token]
+      debug "lpush", params
+      @redis.lpush *params
+    end
+    
+    def method_wait
+      params = ["#{@namespace}.methods", "#{@namespace}.methods_in_progress", 0]
+      debug "brpoplpush", params
+      token = @redis.brpoplpush *params
+      debug "brpoplpush result=#{token.inspect}", params
+      token
+    end
+    
+    def method_done(token)
+      params = ["#{@namespace}.methods_in_progress", 0, token]
+      debug "lrem", params
+      @redis.lrem *params
+    end
+    
+    def method_tokens_waiting
+      params = ["#{@namespace}.methods", 0, -1]
+      list = @redis.lrange *params
+      debug "lrange", params, "-->", list
+      list
+    end
+
+    def method_tokens_in_progress
+      params = ["#{@namespace}.methods_in_progress", 0, -1]
+      list = @redis.lrange *params
+      debug "lrange", params, "-->", list
+      list
+    end
+    
     def method_set_exclusive(token, key, value)
       params = ["#{@namespace}.methods.#{token}", key, serialize(value)]
       debug "hsetnx", params
@@ -95,13 +131,33 @@ module LiveResource
       debug "hget", params, "-->", value
       deserialize value
     end
+
+    def method_delete(token)
+      params = ["#{@namespace}.methods.#{token}"]
+      debug "del", params
+      @redis.del *params
+    end
     
     def result_set(token, result)
-      params = ["#{@name}.results.#{token}", serialize(result)]
+      params = ["#{@namespace}.results.#{token}", serialize(result)]
       debug "lpush", params
       @redis.lpush *params
     end
 
+    def result_get(token)
+      params = ["#{@namespace}.results.#{token}", 0]
+      list, result = @redis.brpop *params
+      debug "brpop", params, "-->", result
+      deserialize(result)
+    end
+    
+    def result_exists?(token)
+      params = ["#{@namespace}.results.#{token}"]
+      exists = @redis.exists *params
+      debug "exists", params, "-->", true
+      exists
+    end
+       
   private
   
     def serialize(value)
@@ -115,7 +171,14 @@ module LiveResource
     end
   
     def deserialize(value)
-      YAML::load value
+      result = YAML::load(value)
+      
+      if result.is_a?(Array) and result[0].is_a?(Exception)
+        # Inverse of what serialize() is doing with exceptions.
+        result = result[0].class.new(result[1])
+      end
+      
+      result
     end
   end
 end

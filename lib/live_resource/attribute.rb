@@ -1,8 +1,8 @@
-require File.join(File.dirname(__FILE__), 'base')
+require File.join(File.dirname(__FILE__), 'common')
 
 module LiveResource
   module Attribute
-    include LiveResource::Base
+    include LiveResource::Common
     
     def self.included(base)
       base.extend(ClassMethods)

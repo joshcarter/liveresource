@@ -1,8 +1,8 @@
-require File.join(File.dirname(__FILE__), 'base')
+require File.join(File.dirname(__FILE__), 'common')
 
 module LiveResource
   module Subscriber
-    include LiveResource::Base
+    include LiveResource::Common
     
     UNSUBSCRIBE_KEY = :unsubscribe_key
 
