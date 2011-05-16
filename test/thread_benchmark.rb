@@ -66,7 +66,7 @@ class ThreadTest < Test::Unit::TestCase
   end
   
   def test_thread_performance
-    n = 1000
+    n = 10000
    
     # Test which is faster: run one thread sitting on Redis vs. many 
     # threads (one per job) dogpiling on Redis. That is, is the cost
