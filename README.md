@@ -38,6 +38,22 @@ Enhance subscriber notation, use hash for options:
       remote_subscription :baz => :method
     end
 
+Simplify setting the namespace when it's the same for all instances of a class:
+
+    class C
+      include LiveResource::Attribute
+  
+      # Current way to set it (works great for per-instance namespaces):
+      def initialize(namespace)
+        self.namespace = namespace
+      end
+  
+      # Additional way (would be great for per-class namespace):
+      remote_namespace 'foo.bar'
+    end
+
+Useful namespace default when none is set explicitly (e.g., pid of current process).
+
 Port all tests from old/state_publisher_test.rb.
 
 Finish rdoc, test to make sure it looks right.
