@@ -54,6 +54,12 @@ Simplify setting the namespace when it's the same for all instances of a class:
 
 Useful namespace default when none is set explicitly (e.g., pid of current process).
 
+Investigate odd benchmark results (4 core/8 thread Xserve, local Redis process):
+
+- Best attribute read/write performance with one thread; seems like we'd do better with multiple due to IO multiplexing if nothing else. (Perhaps my benchmark is busted.)
+
+- Best method call performance is synchronous with one thread.
+
 Port all tests from old/state_publisher_test.rb.
 
 Finish rdoc, test to make sure it looks right.
