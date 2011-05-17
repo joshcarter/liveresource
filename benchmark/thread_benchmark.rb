@@ -1,5 +1,4 @@
-require File.join(File.dirname(__FILE__), 'test_helper')
-require 'benchmark'
+require File.join(File.dirname(__FILE__), 'benchmark_helper')
 
 class Supervisor
   CONCURRENT_WORKERS = 10

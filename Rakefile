@@ -10,6 +10,11 @@ Rake::TestTask.new :test do |test|
   test.test_files = ['test/*_test.rb']
 end
 
+Rake::TestTask.new :benchmark do |benchmark|
+  benchmark.verbose = false
+  benchmark.test_files = ['benchmark/*_benchmark.rb']
+end
+
 gem_spec = Gem::Specification.new do |spec|
   spec.name = 'liveresource'
   spec.version = '1.1.0'
