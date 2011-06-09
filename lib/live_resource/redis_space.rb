@@ -33,18 +33,25 @@ module LiveResource
       RedisSpace.new(@namespace, self.logger, new_redis)
     end
     
-    def attribute_set(key, value)
+    def attribute_set(key, value, options = nil)
       key = "#{@namespace}.#{key}"
       value = YAML::dump(value)
 
-      # Don't publish duplicate states
-      return if (value == @redis[key])    
+      # Pull out the options we support
+      if options
+        ttl = options[:ttl]
+      end
+
+      # Don't publish duplicate states as long as there's no TTL
+      return if (value == @redis[key]) and ttl.nil?
 
       debug "set", key, value
       @redis[key] = value
 
       debug "publish", key, value
       @redis.publish key, value
+
+      @redis.expire(key, ttl) if ttl
 
       value
     end
