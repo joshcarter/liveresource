@@ -62,6 +62,22 @@ module LiveResource
 
       value.nil? ? nil : YAML::load(value)
     end
+    
+    def attribute_watch(key)
+      key = "#{@namespace}.#{key}"
+      debug "watch", key
+      @redis.watch key
+    end
+    
+    def multi
+      debug "multi"
+      @redis.multi
+    end
+
+    def exec
+      debug "exec"
+      @redis.exec
+    end
 
     def subscribe(keys, &block)
       @saved_redis_client = @redis.client

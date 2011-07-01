@@ -153,5 +153,33 @@ class RedisApiTest < Test::Unit::TestCase
     producer.join
     
     assert_equal "hello", values.pop
-  end  
+  end
+  
+  def test_optimistic_locking
+    redis = Redis.new    
+    redis['key'] = 1;
+
+    # Test successful case
+    redis.watch 'key'
+    val = redis['key'].to_i;
+    val = val + 1;
+    redis.multi
+    redis['key'] = val;
+    exec_return = redis.exec
+    trace "exec (1): #{exec_return.inspect}"
+    assert_not_nil exec_return
+    
+    # Test failure case
+    redis.watch 'key'
+    val = redis['key'].to_i;
+    val = val + 1;
+
+    redis['key'] = 10; # someone else hops in and modifies 'key'
+
+    redis.multi
+    redis['key'] = val;
+    exec_return = redis.exec
+    trace "exec (2): #{exec_return.inspect}"
+    assert_nil exec_return
+  end
 end
