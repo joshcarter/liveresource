@@ -25,9 +25,9 @@ The underlying tools, however, are available to any language: Redis is the hub f
 
 LiveResource requires:
 
-* [Redis 2.2+.][http://redis.io/] server. (Redis 1.x does not support commands needed by LiveResource.)
+* [Redis 2.2+.](http://redis.io/) server. (Redis 1.x does not support commands needed by LiveResource.)
 
-* [redis-rb][https://github.com/ezmobius/redis-rb] gem.
+* [redis-rb](https://github.com/ezmobius/redis-rb) gem.
 
 ## Attributes
 
@@ -73,7 +73,38 @@ Not real fancy, but consider that this object could be running in a separate pro
     
 Now this code can run on separate machines.
 
-## Subscribers
+Note that attributes can be set to any Ruby objects; they are automatically marshaled using YAML. (If you want to create a LiveResource-like interface in another programming language, you just need a Redis client and YAML.)
+
+## Attribute Read-Modify-Write
+
+Reading an attribute is an atomic operation; so is writing one. However, sometimes you need to read, modify, and write an attribute as an atomic operation. LiveResource provides a special notation for that:
+
+    class FavoriteColorPublisher
+      include LiveResource::Attribute
+
+      remote_accessor :favorite
+
+      # Update favorite color to anything except the currently-published
+      # favorite.
+      def update_favorite
+        colors = ['red', 'blue', 'green']
+
+        remote_modify(:favorite) do |current_favorite|
+          colors.delete(current_favorite)
+
+          # Value of block will become the new value of the attribute.
+          colors.shuffle.first
+        end
+      end
+    end
+
+The method `remote_modify` takes the attribute to modify (as as symbol) and a block. The block is provided the current value of the attribute; the ending value of the block becomes the new attribute value.
+
+Rather than perform locking on an attribute (which would slow down *all* reads and writes), LiveResource performs *optimistic locking* thanks to features in Redis. If the value of the attribute changes while the `remote_modify` block is executing, LiveResource simply replays the block with the changed value. This preserves the performance of attribute read/write and eliminates potential deadlocks.
+
+As a consequence, however, the **block passed to `remote_modify` should not change external state that relies on the block only executing once.**
+
+## Attribute Subscribers
 
 Attribute get/set is useful for publishing state in one place, then reading it in another. However, in some cases you want on object that monitors a state and performs an action when it changes. An example:
 
@@ -83,18 +114,82 @@ Attribute get/set is useful for publishing state in one place, then reading it i
       remote_subscription :favorite
 
       def favorite(new_favorite)
-        puts "Publisher changed their favorite to #{new_favorite}"
+        puts "Publisher changed its favorite to #{new_favorite}"
       end
     end
-    
+
     subscriber = FavoriteColorSubscriber.new
     subscriber.namespace = "color"
     subscriber.subscribe # Spawns thread
 
-TODO: more here -jdc
+    # Publisher object from the "Attribute" section above.
+    publisher.favorite = "red"
+    # --> callback prints: "Publisher changed their favorite to red"
+    publisher.favorite = "green"
+    # --> callback prints: "Publisher changed their favorite to green"
 
+    subscriber.unsubscribe # Stops and joins callback thread
+
+While the subscription thread is running, the `favorite` method in this subscriber will called any time a new favorite color is published. If desired, you can explicitly set a different callback method name:
+
+    remote_subscription :favorite, :my_callback_method
+
+Callbacks take one parameter, the newly-published value.
+
+Note that the callback thread stays blocked when it's not executing a callback; it does not spin and poll Redis.
+
+## Methods
+
+Finally, LiveResource allows method calling from one object to another. Like attributes, it works great across processes and machines. An example:
+
+    class Adder
+      include LiveResource::MethodProvider
+
+      remote_method :divide
+
+      def divide(dividend, divisor)
+        raise ArgumentError.new("cannot divide by zero") if divisor == 0
+    
+        dividend / divisor
+      end
+    end
+
+    class Client
+      include LiveResource::MethodSender
+  
+      def fancy_process(a, b)
+        begin
+          remote_send :divide, a, b
+        rescue ArgumentError => e
+          puts "oops, I messed up: #{e}"
+        end
+      end
+    end
+
+    adder = Adder.new
+    adder.namespace = "math"
+    adder.start_method_dispatcher
+
+    c = Client.new
+    c.namespace = "math"
+    puts c.fancy_process(10, 5)
+    puts c.fancy_process(1, 0)
+
+    adder.stop_method_dispatcher
+
+The provider includes `MethodProvider` and uses the `remote_method` declaration to tell LiveResource what methods it provides. Method senders include `MethodSender` and there are a couple of ways to send a method:
+
+* `remote_send` is the most similar to Ruby's built-in `send`: it waits for the method to complete and gives you back the method's return value.
+
+* `remote_send_async` allows the sender to fire off a method without blocking. `remote_send_async` returns a token that the caller can later pass to `done_with?` or `wait_for_done`. To get the method's return value, `wait_for_done` will block (if needed) for the remote method to complete and give you the return value. To check on a method without blocking, call `done_with?` which returns true if the method is complete.
+
+As with normal Ruby method calls, the number of parameters passed into `remote_send` must match the number of parameters expected by the method. If these don't match, an `ArgumentError` will be raised.
+
+If an exception is raised by the method provider, that exception is trapped by LiveResource and raised by whoever is getting the method's return value. Thus `remote_send` and `wait_for_done` will raise any exceptions thrown by the remote method.
 
 ## To-Do
+
+(This section is my to-do list for future versions of LiveResource. -jdc)
 
 Enhance subscriber notation, use hash for options:
 
