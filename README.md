@@ -142,7 +142,7 @@ Note that the callback thread stays blocked when it's not executing a callback; 
 
 Finally, LiveResource allows method calling from one object to another. Like attributes, it works great across processes and machines. An example:
 
-    class Adder
+    class Server
       include LiveResource::MethodProvider
 
       remote_method :divide
@@ -159,29 +159,34 @@ Finally, LiveResource allows method calling from one object to another. Like att
   
       def fancy_process(a, b)
         begin
-          remote_send :divide, a, b
+          puts remote_send :divide, a, b
         rescue ArgumentError => e
           puts "oops, I messed up: #{e}"
         end
       end
     end
 
-    adder = Adder.new
-    adder.namespace = "math"
-    adder.start_method_dispatcher
+    s = Server.new
+    s.namespace = "math"
+    s.start_method_dispatcher
 
     c = Client.new
     c.namespace = "math"
-    puts c.fancy_process(10, 5)
-    puts c.fancy_process(1, 0)
+    c.fancy_process(10, 5)
+    c.fancy_process(1, 0)
 
-    adder.stop_method_dispatcher
+    s.stop_method_dispatcher
 
 The provider includes `MethodProvider` and uses the `remote_method` declaration to tell LiveResource what methods it provides. Method senders include `MethodSender` and there are a couple of ways to send a method:
 
 * `remote_send` is the most similar to Ruby's built-in `send`: it waits for the method to complete and gives you back the method's return value.
 
 * `remote_send_async` allows the sender to fire off a method without blocking. `remote_send_async` returns a token that the caller can later pass to `done_with?` or `wait_for_done`. To get the method's return value, `wait_for_done` will block (if needed) for the remote method to complete and give you the return value. To check on a method without blocking, call `done_with?` which returns true if the method is complete.
+
+The provider must run a thread that dispatches methods. This stays blocked except when a method is executing. If a Ruby process only exists to be a LiveResource method provider, you could use a construct like this to block the initial thread until an interrupt signal is received:
+
+    Signal.trap("INT") { s.stop_method_dispatcher }
+    s.start_method_dispatcher.join
 
 As with normal Ruby method calls, the number of parameters passed into `remote_send` must match the number of parameters expected by the method. If these don't match, an `ArgumentError` will be raised.
 

@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'lib/live_resource'
 
-class Adder
+class Server
   include LiveResource::MethodProvider
 
   remote_method :divide
@@ -18,20 +18,20 @@ class Client
   
   def fancy_process(a, b)
     begin
-      remote_send :divide, a, b
+      puts remote_send :divide, a, b
     rescue ArgumentError => e
       puts "oops, I messed up: #{e}"
     end
   end
 end
 
-adder = Adder.new
-adder.namespace = "math"
-adder.start_method_dispatcher
+s = Server.new
+s.namespace = "math"
+s.start_method_dispatcher
 
 c = Client.new
 c.namespace = "math"
-puts c.fancy_process(10, 5)
-puts c.fancy_process(1, 0)
+c.fancy_process(10, 5)
+c.fancy_process(1, 0)
 
-adder.stop_method_dispatcher
+s.stop_method_dispatcher
