@@ -23,7 +23,76 @@ The underlying tools, however, are available to any language: Redis is the hub f
 
 ## Requirements
 
-LiveResource requires access to a Redis 2.2+ server. It has been tested primarily with Redis 2.2.x and 2.3.0. Redis 1.x will not work.
+LiveResource requires:
+
+* [Redis 2.2+.][http://redis.io/] server. (Redis 1.x does not support commands needed by LiveResource.)
+
+* [redis-rb][https://github.com/ezmobius/redis-rb] gem.
+
+## Attributes
+
+Here's a simple attribute publisher:
+
+    class FavoriteColorPublisher
+      include LiveResource::Attribute
+
+      remote_writer :favorite
+    end
+    
+    publisher = FavoriteColorPublisher.new
+    publisher.namespace = "color"
+    publisher.favorite = "blue"
+
+The publisher demonstrates several points:
+
+* LiveResource features are defined in modules -- you include what you need for your use. This publisher only uses `Attribute`. Other modules are `Subscriber`, `MethodProvider`, and `MethodSender`.
+
+* "Remote" Attributes are defined much like Ruby's attributes: `remote_reader`, `remote_writer`, and `remote_accessor` are used to automatically create methods for reading and writing a given attribute.
+
+* LiveResource attributes have a namespace, which is simply a string to identify the resource. If multiple attribute writers use the same namespace (even if they are in separate processes) an assignment to one will overwrite the others.
+
+Let's create a class which can access the above-published favorite color:
+
+    class FavoriteColor
+      include LiveResource::Attribute
+
+      remote_reader :favorite
+    end
+
+    reader = FavoriteColor.new
+    reader.namespace = "color"
+    reader.favorite # --> "blue"
+
+Not real fancy, but consider that this object could be running in a separate process. Further, let's explicitly assign a Redis client instance to both objects:
+
+    # On machine A
+    publisher.redis = Redis.new(:hostname => 'machine-c.local')
+    
+    # On machine B
+    reader.redis = Redis.new(:hostname => 'machine-c.local')
+    
+Now this code can run on separate machines.
+
+## Subscribers
+
+Attribute get/set is useful for publishing state in one place, then reading it in another. However, in some cases you want on object that monitors a state and performs an action when it changes. An example:
+
+    class FavoriteColorSubscriber
+      include LiveResource::Subscriber
+
+      remote_subscription :favorite
+
+      def favorite(new_favorite)
+        puts "Publisher changed their favorite to #{new_favorite}"
+      end
+    end
+    
+    subscriber = FavoriteColorSubscriber.new
+    subscriber.namespace = "color"
+    subscriber.subscribe # Spawns thread
+
+TODO: more here -jdc
+
 
 ## To-Do
 

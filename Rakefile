@@ -21,7 +21,8 @@ gem_spec = Gem::Specification.new do |spec|
   spec.version = '1.1.1'
   spec.summary = 'Live Resource'
   spec.author = 'Josh Carter <public@joshcarter.com>'
-  spec.has_rdoc = false
+  spec.has_rdoc = true
+  spec.add_dependency('redis', '>= 2.0.0')
   candidates = Dir.glob("{lib}/**/*")
   spec.files = candidates.delete_if {|c| c.match(/\.swp|\.svn|html|pkg/)}
 end

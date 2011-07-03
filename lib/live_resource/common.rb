@@ -6,7 +6,7 @@ module LiveResource
     include LogHelper
 
     attr_accessor :namespace
-    
+
     def redis=(redis)
       if @redis_space.nil?
         debug "Creating RedisSpace with client-provided #{redis.inspect}"
