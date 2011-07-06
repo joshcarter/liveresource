@@ -238,19 +238,6 @@ Finish rdoc, test to make sure it looks right.
 
 Meaningful examples, e.g. iostat.
 
-Race condition when method transitions from in-progress to done:
-
-    1) Error:
-    test_wait_for_done_after_done(MethodTest):
-    ArgumentError: No method 56329 pending
-      ./lib/live_resource/method_sender.rb:56:in `done_with?'
-      ./test/method_test.rb:159:in `test_wait_for_done_after_done'
-      ./test/method_test.rb:103:in `call'
-      ./test/method_test.rb:103:in `with_servers'
-      ./test/method_test.rb:154:in `test_wait_for_done_after_done'
-      /Library/Ruby/Gems/1.8/gems/mocha-0.9.10/lib/mocha/integration/test_unit/ruby_version_186_and_above.rb:22:in `__send__'
-      /Library/Ruby/Gems/1.8/gems/mocha-0.9.10/lib/mocha/integration/test_unit/ruby_version_186_and_above.rb:22:in `run'
-
 ## Future Plans
 
 Integrate (or merge) with ActiveService for automatic discovery of resources.

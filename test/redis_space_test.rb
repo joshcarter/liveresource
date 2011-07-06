@@ -94,6 +94,7 @@ class RedisSpaceTest < Test::Unit::TestCase
   def test_serializes_exceptions_properly
     rs = LiveResource::RedisSpace.new('test')
 
+    rs.method_set('1', 'key', 'value') # just need something there
     rs.result_set('1', RuntimeError.new('foo'))    
     result = rs.result_get '1'
     

@@ -65,7 +65,7 @@ module LiveResource
     
     def attribute_watch(key)
       key = "#{@namespace}.#{key}"
-      debug "watch", key
+      debug "watch (attribute_watch)", key
       @redis.watch key
     end
     
@@ -162,9 +162,41 @@ module LiveResource
     end
     
     def result_set(token, result)
-      params = ["#{@namespace}.results.#{token}", serialize(result)]
-      debug "lpush", params
-      @redis.lpush *params
+      # Need to watch the method while setting the result; if the caller 
+      # has given up waiting before we set the result, we don't want to
+      # leave extra crud in Redis.
+      params = ["#{@namespace}.methods.#{token}"]
+      debug "watch (result_set)", params
+      @redis.watch *params
+
+      unless @redis.exists("#{@namespace}.methods.#{token}")
+        # Caller must have deleted method
+        debug "unwatch"
+        @redis.unwatch
+        return
+      end
+      
+      begin
+        debug "multi (result_set)"
+        @redis.multi
+      
+        params = ["#{@namespace}.results.#{token}", serialize(result)]
+        debug "lpush", params
+        @redis.lpush *params
+      
+        result = @redis.exec
+        debug "exec", "-->", result
+      rescue RuntimeError => e
+        # Must have been deleted while we were working on it, bail out.
+        warn e
+        debug "discard"
+        @redis.discard
+      end
+
+      # params = ["#{@namespace}.results.#{token}", serialize(result)]
+      # debug "lpush", params
+      # @redis.lpush *params
+
     end
 
     def result_get(token, timeout = 0)
@@ -183,18 +215,12 @@ module LiveResource
       deserialize(result)
     end
     
-    def result_exists?(token)
-      params = ["#{@namespace}.results.#{token}"]
-      exists = @redis.exists *params
-      debug "exists", params, "-->", exists
-      exists
-    end
-
     def find_token(token)
       token = token.to_s
       
       # Need to do a multi/exec so we can atomically look in 3 lists
       # for the token
+      debug "multi (find_token)"
       @redis.multi
       @redis.lrange("#{@namespace}.methods", 0, -1)
       @redis.lrange("#{@namespace}.methods_in_progress", 0, -1)
