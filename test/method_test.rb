@@ -152,16 +152,20 @@ class MethodTest < Test::Unit::TestCase
   # after we already know the action is done.
   def test_wait_for_done_after_done
     with_servers do
-      client = Client.new
+      # Repeat a bunch of times -- this helps catch a race 
+      # condition in done_with?
+      100.times do
+        client = Client.new
       
-      token = client.remote_send_async(:slow_upcase, 'foobar')
+        token = client.remote_send_async(:slow_upcase, 'foobar')
       
-      while !client.done_with?(token)
-        Thread.pass
+        while !client.done_with?(token)
+          Thread.pass
+        end
+      
+        # Result should be ready for us
+        assert_equal 'FOOBAR', client.wait_for_done(token)
       end
-      
-      # Result should be ready for us
-      assert_equal 'FOOBAR', client.wait_for_done(token)
     end
   end
   
@@ -182,6 +186,24 @@ class MethodTest < Test::Unit::TestCase
       assert_raise(NoMethodError) do
         client.remote_send(:this_is_not_a_valid_method)
       end
+    end
+  end
+  
+  def test_method_timeout_success
+    with_servers do
+      client = Client.new
+      
+      assert_equal "FOOBAR", client.remote_send_with_timeout(:upcase, 1, "foobar")
+    end
+  end
+  
+  
+  def test_method_timeout_failure
+    # No servers
+    client = Client.new
+
+    assert_raise(RuntimeError) do
+      client.remote_send_with_timeout(:upcase, 1, "foobar")
     end
   end
 

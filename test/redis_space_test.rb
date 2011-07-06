@@ -100,5 +100,19 @@ class RedisSpaceTest < Test::Unit::TestCase
     assert_equal RuntimeError, result.class
     assert_equal 'foo', result.message
   end
+  
+  def test_find_token_in_lists
+    r = Redis.new
+    rs = LiveResource::RedisSpace.new('test')
+
+    r.lpush('test.methods', '1')
+    r.lpush('test.methods_in_progress', '2')
+    r.lpush('test.results.3', 'result')
+    
+    assert_equal :methods, rs.find_token('1')
+    assert_equal :methods_in_progress, rs.find_token('2')
+    assert_equal :results, rs.find_token('3')
+    assert_equal nil, rs.find_token('4')
+  end
 end
 

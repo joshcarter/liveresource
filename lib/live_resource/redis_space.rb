@@ -167,18 +167,46 @@ module LiveResource
       @redis.lpush *params
     end
 
-    def result_get(token)
-      params = ["#{@namespace}.results.#{token}", 0]
+    def result_get(token, timeout = 0)
+      unless timeout.is_a?(Integer)
+        raise ArgumentError.new("timeout #{timeout} must be an integer")
+      end
+      
+      params = ["#{@namespace}.results.#{token}", timeout]
       list, result = @redis.brpop *params
-      debug "brpop", params, "-->", result
+      debug "brpop", params, "-->", result.inspect
+      
+      if result.nil?
+        raise RuntimeError.new("timed out waiting for method #{token}")
+      end
+      
       deserialize(result)
     end
     
     def result_exists?(token)
       params = ["#{@namespace}.results.#{token}"]
       exists = @redis.exists *params
-      debug "exists", params, "-->", true
+      debug "exists", params, "-->", exists
       exists
+    end
+
+    def find_token(token)
+      token = token.to_s
+      
+      # Need to do a multi/exec so we can atomically look in 3 lists
+      # for the token
+      @redis.multi
+      @redis.lrange("#{@namespace}.methods", 0, -1)
+      @redis.lrange("#{@namespace}.methods_in_progress", 0, -1)
+      @redis.lrange("#{@namespace}.results.#{token}", 0, -1)
+      result = @redis.exec
+      debug "bulk", "-->", result
+      
+      return :methods if result[0].include?(token)
+      return :methods_in_progress if result[1].include?(token)
+      return :results if (result[2] != [])
+      
+      nil
     end
        
   private
