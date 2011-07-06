@@ -71,7 +71,9 @@ module LiveResource
           next
         end
         
-        if (method.arity != params.length)
+        if (method.arity > 0 and method.arity != params.length) or
+          (method.arity < 0 and method.arity.abs != params.length and
+          (method.arity.abs - 1) != params.length)
           message = "wrong number of arguments to `#{method_name}' (#{params.length} for #{method.arity})"
           debug message
           redis_space.result_set token, ArgumentError.new(message)

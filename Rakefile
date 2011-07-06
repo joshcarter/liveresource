@@ -18,7 +18,7 @@ end
 
 gem_spec = Gem::Specification.new do |spec|
   spec.name = 'liveresource'
-  spec.version = '1.1.2'
+  spec.version = '1.1.3'
   spec.summary = 'Live Resource'
   spec.author = 'Josh Carter <public@joshcarter.com>'
   spec.has_rdoc = true

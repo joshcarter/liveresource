@@ -245,4 +245,4 @@ Integrate (or merge) with ActiveService for automatic discovery of resources.
 ## Contributors
 
 * Josh Carter: original author
-* Rob Grimm: TTL on remote_writer (thanks Rob!)
+* Rob Grimm: TTL on remote_writer, methods with optional params (thanks Rob!)
