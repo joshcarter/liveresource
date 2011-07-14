@@ -114,6 +114,6 @@ class RedisSpaceTest < Test::Unit::TestCase
     assert_equal :methods_in_progress, rs.find_token('2')
     assert_equal :results, rs.find_token('3')
     assert_equal nil, rs.find_token('4')
-  end
+  end  
 end
 

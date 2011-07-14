@@ -47,7 +47,10 @@ module LiveResource
               next
             end
 
-            send m, new_value
+            # Need to send method on new thread, as that method may do
+            # additional LiveResource/Redis operations, and this thread's
+            # Redis client is in subscribe mode.
+            Thread.new { send m, new_value }
           end
 
           on.unsubscribe do |key, total|

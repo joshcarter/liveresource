@@ -15,11 +15,11 @@ module LiveResource
 
       # TODO: initialize namespace with something like PID if it's nil.
 
-      debug "RedisSpace created for namespace #{namespace.inspect}, Redis #{redis.inspect}"
+      debug "RedisSpace created for namespace #{namespace.inspect}, Redis #{redis.object_id}"
     end
     
     def clone
-      client = @saved_redis_client ? @saved_redis_client : @redis.client
+      client = @redis.client
       
       # Create independent Redis
       new_redis = Redis.new(
@@ -80,8 +80,6 @@ module LiveResource
     end
 
     def subscribe(keys, &block)
-      @saved_redis_client = @redis.client
-
       keys = keys.map { |key| "#{@namespace}.#{key}"}
       
       debug "subscribe #{keys.inspect}"
@@ -96,8 +94,6 @@ module LiveResource
     end
     
     def unsubscribe
-      @saved_redis_client = nil
-      
       debug "unsubscribe"
       @redis.unsubscribe
     end

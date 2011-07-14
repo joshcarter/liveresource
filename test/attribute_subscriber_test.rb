@@ -65,13 +65,8 @@ class AttributeSubscriberTest < Test::Unit::TestCase
   
   def test_attribute_publishes_to_redis
     # Setting attribute should both send a set and publish to Redis.
-    redis = Redis.new
-    redis.expects(:set).once
-    redis.expects(:publish).once
-    Redis.expects(:new).returns(redis)
-    
-    rs = LiveResource::RedisSpace.new("mock")
-    LiveResource::RedisSpace.expects(:new).returns(rs)
+    Redis.any_instance.expects(:set).once
+    Redis.any_instance.expects(:publish).once
     
     UserLogin.new("foo").user_logged_in = "Bob"
   end
