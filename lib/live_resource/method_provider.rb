@@ -18,6 +18,13 @@ module LiveResource
       end
     end
     
+    # Run the method dispatcher in the current thread.
+    def run_method_dispatcher
+      method_dispatcher
+    end
+  
+    # Run the method dispatcher in a new Thread, which
+    # LiveResource will create.
     def start_method_dispatcher
       return if @dispatcher_thread
 
@@ -49,6 +56,8 @@ module LiveResource
 
         method_name = redis_space.method_get token, :method
         params = redis_space.method_get token, :params
+
+        debug "#{self} token #{token} method_name: #{method_name}"
         
         method_symbol = self.class.instance_eval do
           @remote_methods &&
