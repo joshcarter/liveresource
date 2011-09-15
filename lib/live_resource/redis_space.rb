@@ -249,8 +249,8 @@ module LiveResource
     def serialize(value)
       if value.is_a? Exception
         # YAML can't dump an exception properly, it loses the message.
-        # Save that separately as a string.
-        YAML::dump [value, value.message]
+        # and the backtrace.  Save those separately as strings.
+        YAML::dump [value, value.message, value.backtrace]
       else
         YAML::dump value
       end
@@ -263,7 +263,9 @@ module LiveResource
       
       if result.is_a?(Array) and result[0].is_a?(Exception)
         # Inverse of what serialize() is doing with exceptions.
-        result = result[0].class.new(result[1])
+        e = result[0].class.new(result[1])
+        e.set_backtrace result[2]
+        result = e
       end
       
       result
