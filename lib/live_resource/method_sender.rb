@@ -39,6 +39,11 @@ module LiveResource
       end
 
       if result.is_a?(Exception)
+        # Merge the backtrace from the passed exception with this
+        # stack trace so the final backtrace looks like the method_sender
+        # called the method_provider directly.
+        trace = merge_backtrace caller, result.backtrace
+        result.set_backtrace trace
         raise result
       else
         result
@@ -58,6 +63,38 @@ module LiveResource
       else
         raise ArgumentError.new("No method #{token} pending")
       end
+    end
+
+  private
+
+    # Merge the stack trace from the method sendor and method
+    # provider so it looks like one, seamless stack trace.
+    # LiveResource traces are removed and replaced with a simple
+    # 'via LiveResource' type message.
+    def merge_backtrace(sender_trace, provider_trace)
+      return nil if provider_trace.nil?
+      return provider_trace if sender_trace.nil?
+
+      # Find the first live resource stack trace
+      index = provider_trace.index do |t|
+        t =~ /lib\/live_resource\/method_provider/
+      end
+
+      # Slice off everything starting at that index
+      result = provider_trace[0 .. (index - 1)]
+
+      # Add a trace that indicates that live resource was used
+      # to link the sender to the provider.
+      result << 'via LiveResource'
+
+      # For the sender trace, remove the 'method_sendor'
+      # part of the trace.
+      index = sender_trace.index do |t| 
+        t =~ /lib\/live_resource\/method_sender/
+      end
+      result += sender_trace[(index + 1) .. (sender_trace.length - 1)]
+
+      result
     end
   end
 end

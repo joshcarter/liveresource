@@ -16,6 +16,10 @@ Rake::TestTask.new :benchmark do |benchmark|
   benchmark.test_files = ['benchmark/*_benchmark.rb']
 end
 
+task :clean do
+  FileUtils.rm_rf 'pkg'
+end
+
 gem_spec = Gem::Specification.new do |spec|
   spec.name = 'liveresource'
   spec.version = '1.1.4'
