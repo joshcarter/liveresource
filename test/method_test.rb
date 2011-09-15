@@ -209,6 +209,9 @@ class MethodTest < Test::Unit::TestCase
     assert_raise(RuntimeError) do
       client.remote_send_with_timeout(:upcase, 1, "foobar")
     end
+
+    # Should have no junk left over in Redis
+    assert_equal 0, Redis.new.dbsize
   end
 
   def test_method_completes_after_timeout

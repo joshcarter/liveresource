@@ -230,6 +230,19 @@ module LiveResource
       
       nil
     end
+
+    def delete_token(token)
+      token = token.to_s
+      
+      # Need to do a multi/exec so we can atomically delete from all 3 lists
+      debug "multi (delete_token)"
+      @redis.multi
+      @redis.lrem("#{@namespace}.methods", 0, token)
+      @redis.lrem("#{@namespace}.methods_in_progress", 0, token)
+      @redis.lrem("#{@namespace}.results.#{token}", 0, token)
+      result = @redis.exec
+      debug "bulk", "-->", result
+    end
        
   private
   
@@ -244,6 +257,8 @@ module LiveResource
     end
   
     def deserialize(value)
+      raise "Cannot deserialize nil value" if value.nil?
+      
       result = YAML::load(value)
       
       if result.is_a?(Array) and result[0].is_a?(Exception)

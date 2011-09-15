@@ -30,6 +30,10 @@ module LiveResource
     def wait_for_done(token, timeout = 0)
       begin
         result = redis_space.result_get(token, timeout)
+      rescue
+        # Clean token from any lists before passing up exception
+        redis_space.delete_token token
+        raise
       ensure
         redis_space.method_delete token
       end
