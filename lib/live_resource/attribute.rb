@@ -5,8 +5,8 @@ module LiveResource
     include LiveResource::Common
     
     def remote_modify(attribute, &block)
-      unless methods.include?(attribute.to_s)
-        raise ArgumentError.new("remote_modify: no such attribute #{attribute}")
+      unless methods.map { |m| m.to_sym }.include?(attribute.to_sym)
+        raise ArgumentError.new("remote_modify: no such attribute '#{attribute}'")
       end
       
       unless block
