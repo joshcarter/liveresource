@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'redis'
 require 'yaml'
-require File.join(File.dirname(__FILE__), 'log_helper')
+require_relative 'log_helper'
 
 module LiveResource
   def self.redis=(redis)
@@ -303,5 +303,5 @@ module LiveResource
   #     
   #     result
   #   end
-  # end
+  end
 end

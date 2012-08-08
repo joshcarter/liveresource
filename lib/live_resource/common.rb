@@ -25,20 +25,6 @@ module LiveResource
       redisized_key(obj.resource_name)
     end
 
-    def redis_name_and_class(obj)
-      redis_name = nil
-      redis_class = redisized_key(obj.to_s)
-
-      if obj.is_a? Class
-        redis_class << "-class"
-        redis_name = "#{redis_class}.#{host_pid}"
-      else
-        redis_name = redisized_key(obj.resource_name)
-      end
-
-      [redis_name, redis_class]
-    end
-
     def redisized_key(word)
       word = word.to_s.dup
       word.gsub!(/([A-Z\d]+)([A-Z][a-z])/,'\1_\2')
