@@ -1,5 +1,5 @@
 require 'rubygems'
-require 'rake/gempackagetask'
+# require 'rake/package_task'
 require 'rake/testtask'
 
 desc "Default Task"
@@ -20,18 +20,18 @@ task :clean do
   FileUtils.rm_rf 'pkg'
 end
 
-gem_spec = Gem::Specification.new do |spec|
-  spec.name = 'liveresource'
-  spec.version = '1.1.4'
-  spec.summary = 'Live Resource'
-  spec.author = 'Josh Carter <public@joshcarter.com>'
-  spec.has_rdoc = true
-  spec.add_dependency('redis', '>= 2.0.0')
-  candidates = Dir.glob("{lib}/**/*")
-  spec.files = candidates.delete_if {|c| c.match(/\.swp|\.svn|html|pkg/)}
-end
-
-gem = Rake::GemPackageTask.new(gem_spec) do |pkg|
-  pkg.need_tar = false
-  pkg.need_zip = false
-end
+# gem_spec = Gem::Specification.new do |spec|
+#   spec.name = 'liveresource'
+#   spec.version = '1.1.4'
+#   spec.summary = 'Live Resource'
+#   spec.author = 'Josh Carter <public@joshcarter.com>'
+#   spec.has_rdoc = true
+#   spec.add_dependency('redis', '>= 2.0.0')
+#   candidates = Dir.glob("{lib}/**/*")
+#   spec.files = candidates.delete_if {|c| c.match(/\.swp|\.svn|html|pkg/)}
+# end
+# 
+# gem = Rake::GemPackageTask.new(gem_spec) do |pkg|
+#   pkg.need_tar = false
+#   pkg.need_zip = false
+# end
