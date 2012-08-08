@@ -2,21 +2,8 @@ require File.join(File.dirname(__FILE__), 'common')
 
 module LiveResource
   module MethodProvider
-    include LiveResource::Common
-
     attr_reader :dispatcher_thread
     EXIT_TOKEN = 'exit'
-    
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
-    
-    module ClassMethods
-      def remote_method(*methods)
-        @remote_methods ||= []
-        @remote_methods += methods
-      end
-    end
     
     # Run the method dispatcher in the current thread.
     def run_method_dispatcher

@@ -1,0 +1,108 @@
+module LiveResource
+  module Declarations
+    def self.included(base)
+      base.extend(ClassMethods)
+    end
+    
+    module ClassMethods
+      def resource_name=(name)
+        
+      end
+
+      def resource_class=(class_name)
+        @resource_class = class_name
+      end
+      
+      def resource_class
+        @resource_class ||= self.class
+      end
+
+
+      # call-seq:
+      #   remote_method :method1
+      #   remote_method :method1, :method2, :method3
+      #
+      # Declare a remote method. A list of symbols is used
+      # to create multiple methods.
+      def remote_method(*methods)
+        @remote_methods ||= []
+        @remote_methods += methods
+      end
+      
+      def remote_class_method(*methods)
+        # TODO: class methods
+      end
+
+      # call-seq:
+      #   remote_reader :attr
+      #   remote_reader :attr1, :attr2, :attr3
+      #
+      # Declare a remote attribute reader. A list of symbols is used
+      # to create multiple attribute readers.
+      def remote_reader(*params)
+        # One symbol and one hash is treated as a reader with options;
+        # right now there are no reader options, so just pop them off.
+        if (params.length == 2) && (params.last.is_a? Hash)
+          params.pop
+        end
+        
+        params.each do |m|
+          define_method("#{m}") do
+            redis_space.attribute_get(m)
+          end
+        end
+      end
+      
+      # call-seq:
+      #   remote_writer :attr
+      #   remote_writer :attr, { :opt => val }
+      #   remote_writer :attr1, :attr2, :attr3
+      #
+      # Declare a remote attribute writer. One or more symbols are 
+      # used to declare writers with default options. This creates
+      # methods matching the symbols provided, e.g.:
+      #
+      #   remote_writer :attr   ->    def attr=(value) [...]
+      #
+      # One symbol and a hash is used to declare an attribute writer
+      # with options. Currently supported options:
+      #
+      # * :ttl (integer): time-to-live of attribute. After (TTL)
+      #   seconds, the value of the attribute returns to nil.
+      def remote_writer(*params)
+        options = nil
+
+        # One symbol and one hash is treated as a writer with options.
+        if (params.length == 2) && (params.last.is_a? Hash)
+          options = params.pop
+        end
+        
+        # Everything left in params should be a symbol (i.e., method name).
+        if params.find { |m| !m.is_a? Symbol }
+          raise ArgumentError.new("Invalid or ambiguous arguments to remote_writer: #{params.inspect}")
+        end
+        
+        params.each do |m|
+          define_method("#{m}=") do |value|
+            redis_space.attribute_set(m, value, options)
+          end
+        end
+      end
+
+      # call-seq:
+      #   remote_accessor :attr
+      #   remote_accessor :attr, { :opt => val }
+      #   remote_accessor :attr1, :attr2, :attr3
+      #
+      # Declare remote attribute reader and writer. One or more symbols
+      # are used to declare multiple attributes, as in +remote_writer+.
+      # One symbol with a hash is used to declare an accessor with
+      # options; currently these options are only supported on the 
+      # attribute write, and they are ignored on the attribute read.
+      def remote_accessor(*params)
+        remote_reader(*params)
+        remote_writer(*params)
+      end
+    end    
+  end
+end
