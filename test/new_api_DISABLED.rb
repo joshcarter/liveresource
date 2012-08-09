@@ -84,7 +84,7 @@ class ModuleTest < Test::Unit::TestCase
 	  vc.create_volume "foo"
 	  
 	  # Async class-level call with future
-	  done = vc.create_volume!? "bar"
+	  done = vc.create_volume!?("bar")
 	  
 	  # Wait for complete
 	  done.value
@@ -94,7 +94,7 @@ class ModuleTest < Test::Unit::TestCase
     v1 = LiveResource::find(:volume, "foo")
     
     # Find by resource matching type and block.
-    v2 = LiveResource::find :volume { |v| v.name == "bar" }
+    v2 = LiveResource::find(:volume) { |v| v.name == "bar" }
 	
 	  # Attribute read: only consults Redis
 	  assert_equal false, v1.online

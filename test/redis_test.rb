@@ -1,4 +1,4 @@
-require File.join(File.dirname(__FILE__), 'test_helper')
+require_relative 'test_helper'
 
 class FancyClass
   attr_reader :value
@@ -8,13 +8,13 @@ class FancyClass
   end
 end
 
-class RedisSpaceTest < Test::Unit::TestCase
+class RedisClientTest < Test::Unit::TestCase
   def setup
     Redis.new.flushall
   end
 
   def test_global_redis_space
-    assert_equal RedisClient, LiveResource::redis.class
+    assert_equal LiveResource::RedisClient, LiveResource::redis.class
   end
 
   # def test_method_get_set_with_same_key
