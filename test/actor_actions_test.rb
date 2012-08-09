@@ -30,6 +30,8 @@ end
 
 class TestClass < Test::Unit::TestCase
   def setup
+    LiveResource::redis_logger.level = Logger::DEBUG
+    
     @c1 = Class1.new
     @c2 = Class2.new
     @c3 = Class3.new

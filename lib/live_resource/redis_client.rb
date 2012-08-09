@@ -74,7 +74,7 @@ module LiveResource
   end
 
   def self.redis_logger
-    @redis_logger ||= Logger.new
+    @redis_logger ||= Logger.new(STDERR)
     @redis_logger
   end
 
@@ -90,6 +90,7 @@ module LiveResource
 
     def initialize(redis = Redis.new)
       @redis = redis
+      @logger = LiveResource::redis_logger
 
       debug "RedisClient created for Redis #{redis.client.host}:#{redis.client.port} (id #{redis.object_id})"
     end
@@ -131,7 +132,10 @@ module LiveResource
 
     def method_missing(method, *params, &block)
       if @redis.respond_to? method
-        @redis.send(method, *params, &block)
+        debug ">>", method.to_s, *params
+        response = @redis.send(method, *params, &block)
+        debug "<<", response
+        response
       else
         super
       end
