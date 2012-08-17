@@ -2,6 +2,10 @@ require_relative 'test_helper'
 
 class Class1
   include LiveResource::Resource
+
+  def initialize(name)
+    @name = name
+  end
   
   # def method1(param1, param2)
   #   to1 = LiveResource::any(:class_2)
@@ -30,33 +34,39 @@ end
 
 class TestClass < Test::Unit::TestCase
   def setup
+    Redis.new.flushall
+
     LiveResource::redis_logger.level = Logger::DEBUG
-    
-    # comment-y comment
-    @c1 = Class1.new
+
+    @c1 = Class1.new("bob")
     @c2 = Class2.new
     @c3 = Class3.new
-    
+
     LiveResource::register(@c1)
     LiveResource::register(@c2)
     LiveResource::register(@c3)
-    
-    LiveResource::start
+
+    10.times { Thread.pass } # Let method dispatchers start
   end
-  
+
   def teardown
     LiveResource::stop
-
-    LiveResource::unregister(@c1)
-    LiveResource::unregister(@c2)
-    LiveResource::unregister(@c3)
   end
 
-  def test_message_path
-    assert true
-    
+  def test_find_instance
+    LiveResource::register Class1.new("sue")
+    LiveResource::register Class1.new("fred")
+
+    puts ">> checking for all class1 instances now <<"
+
+    assert_equal 3, LiveResource::all(:class1).length
+
+    # assert_not_nil LiveResource.find(:class1, :fred)
+  end
+
+  # def test_message_path
     # v = LiveResource::any(:class_1).method1? "foo", "bar"
-    # 
+    #
     # assert_equal "FOO", v.value
-  end
+  # end
 end
