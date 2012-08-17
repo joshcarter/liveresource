@@ -4,14 +4,14 @@ require 'yaml'
 require_relative 'log_helper'
 
 module LiveResource
-  module Resource
+  module HasRedisClient
     def redis
       LiveResource::redis
     end
 
     # Class-level redis class name
     def self.redis_class
-      "#{redisized_key(self.to_s)}-class"
+      "class"
     end
 
     # Instance-level redis class name
@@ -21,9 +21,7 @@ module LiveResource
 
     # Class-level redis object name
     def self.redis_name
-      @hostname ||= `hostname`
-
-      "#{redis_class}.#{@hostname}.#{Process.pid}"
+      redisized_key(self.to_s)
     end
 
     # Instance-level redis object name
@@ -109,23 +107,23 @@ module LiveResource
 
       RedisClient.new(new_redis)
     end
-    
+
     def methods_list(resource)
       "#{resource.redis_class}.#{resource.redis_name}.methods"
     end
 
     def methods_in_progress_list(resource)
-      "#{resource.redis_class}.#{resource.redis_name}.methods-in-progress"      
+      "#{resource.redis_class}.#{resource.redis_name}.methods-in-progress"
     end
 
     def method_wait(resource)
       brpoplpush methods_list(resource), methods_in_progress_list(resource), 0
     end
-    
+
     def method_push(resource, token)
       lpush methods_list(resource), token
     end
-    
+
     def method_done(resource, token)
       lrem methods_in_progress_list(resource), 0, token
     end
