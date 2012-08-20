@@ -10,6 +10,10 @@ class Class1
     @name = name
   end
 
+  def method1(param1, param2)
+    param1 + param2
+  end
+
   # def method1(param1, param2)
   #   to1 = LiveResource::any(:class_2)
   #   to2 = LiveResource::any(:class_3)
@@ -45,13 +49,17 @@ class TestClass < Test::Unit::TestCase
 
     LiveResource::redis_logger.level = Logger::DEBUG
 
-    @c1 = Class1.new("bob")
-    @c2 = Class2.new
-    @c3 = Class3.new
+    # Class resources
+    # LiveResource::register Class1
+    # LiveResource::register Class2
+    # LiveResource::register Class3
 
-    LiveResource::register(@c1)
-    LiveResource::register(@c2)
-    LiveResource::register(@c3)
+    # Instance resources
+    LiveResource::register Class1.new("bob")
+    LiveResource::register Class1.new("sue")
+    LiveResource::register Class1.new("fred")
+    LiveResource::register Class2.new
+    LiveResource::register Class3.new
 
     10.times { Thread.pass } # Let method dispatchers start
   end
@@ -61,17 +69,16 @@ class TestClass < Test::Unit::TestCase
   end
 
   def test_find_instance
-    LiveResource::register Class1.new("sue")
-    LiveResource::register Class1.new("fred")
-
-    10.times { Thread.pass } # Let method dispatchers start
-
-    puts ">> checking for all class1 instances now <<"
-
     assert_equal 3, LiveResource::all(:class1).length
 
     assert_not_nil LiveResource.find(:class1, :fred)
     assert_nil LiveResource.find(:class1, :alf)
+  end
+
+  def test_instances_have_methods
+    i = LiveResource::all(:class1).first
+
+    assert i.respond_to?(:method1), "instance does not respond to method1"
   end
 
   # def test_message_path

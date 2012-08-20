@@ -2,9 +2,10 @@ require 'rubygems'
 require 'redis'
 require 'yaml'
 require_relative 'log_helper'
+require_relative 'redis_client/base'
 
 module LiveResource
-  module HasRedisClient
+  module RedisClientExtensions
     def redis
       LiveResource::redis
     end
@@ -78,70 +79,5 @@ module LiveResource
 
   def self.redis_logger=(logger)
     @redis_logger = logger
-  end
-end
-
-module LiveResource
-  class RedisClient
-    include LogHelper
-    attr_writer :redis
-
-    def initialize(redis = Redis.new)
-      @redis = redis
-      @logger = LiveResource::redis_logger
-
-      debug "RedisClient created for Redis #{redis.client.host}:#{redis.client.port} (id #{redis.object_id})"
-    end
-
-    def clone
-      client = @redis.client
-
-      # Create independent Redis
-      new_redis = Redis.new(
-        :host => client.host,
-        :port => client.port,
-        :timeout => client.timeout,
-        :logger => client.logger,
-        :password => client.password,
-        :db => client.db)
-
-      RedisClient.new(new_redis)
-    end
-
-    def methods_list(resource)
-      "#{resource.redis_class}.#{resource.redis_name}.methods"
-    end
-
-    def methods_in_progress_list(resource)
-      "#{resource.redis_class}.#{resource.redis_name}.methods-in-progress"
-    end
-
-    def method_wait(resource)
-      brpoplpush methods_list(resource), methods_in_progress_list(resource), 0
-    end
-
-    def method_push(resource, token)
-      lpush methods_list(resource), token
-    end
-
-    def method_done(resource, token)
-      lrem methods_in_progress_list(resource), 0, token
-    end
-
-    def method_missing(method, *params, &block)
-      if @redis.respond_to? method
-        debug ">>", method.to_s, *params
-        response = @redis.send(method, *params, &block)
-        debug "<<", response
-        response
-      else
-        super
-      end
-    end
-
-    def respond_to?(method)
-      return true if @redis.respond_to?(method)
-      super
-    end
   end
 end
