@@ -5,9 +5,14 @@ class Class1
 
   attr_reader :name
   resource_name :name
+  resource_class :class_1
 
   def initialize(name)
     @name = name
+  end
+
+  def method1(param1, param2)
+    param1 + param2
   end
 
   # def method1(param1, param2)
@@ -23,35 +28,41 @@ class Class2
   include LiveResource::Resource
 
   resource_name :object_id
+  resource_class :class_2
 
-  # def method2(param1, param2, param3)    
-  #   param1
-  # end
+  def method2(param1, param2, param3)
+    param1
+  end
 end
 
 class Class3
   include LiveResource::Resource
 
   resource_name :object_id
+  resource_class :class_3
 
-  # def method3(param1)
-  #   param1.upcase
-  # end
+  def method3(param1)
+    param1.upcase
+  end
 end
 
 class TestClass < Test::Unit::TestCase
   def setup
     Redis.new.flushall
 
-    LiveResource::redis_logger.level = Logger::DEBUG
+    LiveResource::RedisClient.logger.level = Logger::INFO
 
-    @c1 = Class1.new("bob")
-    @c2 = Class2.new
-    @c3 = Class3.new
+    # Class resources
+    # LiveResource::register Class1
+    # LiveResource::register Class2
+    # LiveResource::register Class3
 
-    LiveResource::register(@c1)
-    LiveResource::register(@c2)
-    LiveResource::register(@c3)
+    # Instance resources
+    obj1 = LiveResource::register Class1.new("bob")
+    LiveResource::register Class1.new("sue")
+    LiveResource::register Class1.new("fred")
+    LiveResource::register Class2.new
+    LiveResource::register Class3.new
 
     10.times { Thread.pass } # Let method dispatchers start
   end
@@ -61,22 +72,25 @@ class TestClass < Test::Unit::TestCase
   end
 
   def test_find_instance
-    LiveResource::register Class1.new("sue")
-    LiveResource::register Class1.new("fred")
+    assert_equal 3, LiveResource::all(:class_1).length
 
-    10.times { Thread.pass } # Let method dispatchers start
+    assert_not_nil LiveResource.find(:class_1, :fred)
+    assert_nil LiveResource.find(:class_1, :alf)
 
-    puts ">> checking for all class1 instances now <<"
+    proxy = LiveResource.find(:class_1) do |name|
+      name == "bob" ? name : nil
+    end
 
-    assert_equal 3, LiveResource::all(:class1).length
-
-    assert_not_nil LiveResource.find(:class1, :fred)
-    assert_nil LiveResource.find(:class1, :alf)
+    assert_equal "bob", proxy.redis_name
   end
 
-  # def test_message_path
-    # v = LiveResource::any(:class_1).method1? "foo", "bar"
-    #
-    # assert_equal "FOO", v.value
-  # end
+  def test_instances_have_methods
+    i = LiveResource::all(:class_1).first
+
+    assert i.respond_to?(:method1), "instance does not respond to method1"
+  end
+
+  def test_message_path
+    assert_equal 5, LiveResource::find(:class_1, :bob).method1(2, 3)
+  end
 end

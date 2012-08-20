@@ -7,17 +7,17 @@ module LiveResource
         @logger = Logger.new(STDERR)
         @logger.level = Logger::WARN
       end
-      
+
       @logger
     end
-    
+
     def logger=(logger)
       @logger = logger
     end
-    
+
     [:debug, :info, :warn, :error, :fatal].each do |level|
       define_method(level) do |*params|
-        self.logger.send(level, params.join(' '))
+        logger.send(level, params.join(' '))
       end
     end
   end
