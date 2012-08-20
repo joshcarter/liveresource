@@ -1,55 +1,31 @@
 module LiveResource
-  def self.register(resource)
-    puts "registering #{resource.to_s}"
-
-    @@resources ||= []
-    @@resources << resource
-
-    resource.start
-  end
-
-  def self.unregister(resource)
-    puts "unregistering #{resource.to_s}"
-
-    resource.stop
-
-    @@resources.delete resource
-  end
-
-  def self.start
-    @@resources.each do |resource|
-      resource.start
-    end
-  end
-
-  def self.stop
-    @@resources.each do |resource|
-      resource.stop
-    end
-  end
-
-  module MethodDispatcher
-    attr_reader :dispatcher_thread
+  class MethodDispatcher
+    attr_reader :thread, :target
     EXIT_TOKEN = 'exit'
 
-    # Run the method dispatcher in a new Thread, which
-    # LiveResource will create.
-    def start
-      return if @dispatcher_thread
+    def initialize(target)
+      @target = target
+      @thread = nil
 
-      @dispatcher_thread = Thread.new { run }
+      start
+    end
+
+    def start
+      return if @thread
+
+      @thread = Thread.new { run }
     end
 
     def stop
-      return if @dispatcher_thread.nil?
+      return if @thread.nil?
 
       redis.method_push(self, EXIT_TOKEN)
-      @dispatcher_thread.join
-      @dispatcher_thread = nil
+      @thread.join
+      @thread = nil
     end
 
     def running?
-      @dispatcher_thread != nil
+      @thread != nil
     end
 
     def run
@@ -57,7 +33,7 @@ module LiveResource
 
       # Need to register our class and instance in Redis so the finders
       # (all, any, etc.) will work.
-      redis.hincrby redis_class, redis_name, 1
+      redis.hincrby @target.redis_class, @target.redis_name, 1
 
       begin
         loop do
@@ -74,7 +50,7 @@ module LiveResource
         # connection to Redis, or whatever -- this decrement won't occur.
         # Supervisor should clean up where possible.
 
-        redis.hincrby redis_class, redis_name, -1
+        redis.hincrby @target.redis_class, @target.redis_name, -1
         info("#{self} method dispatcher exiting")
       end
     end

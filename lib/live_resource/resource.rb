@@ -1,3 +1,4 @@
+require_relative 'log_helper'
 require_relative 'redis_client'
 require_relative 'declarations'
 require_relative 'finders'
