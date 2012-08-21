@@ -5,6 +5,7 @@ class Class1
 
   attr_reader :name
   resource_name :name
+  resource_class :class_1
 
   def initialize(name)
     @name = name
@@ -27,6 +28,7 @@ class Class2
   include LiveResource::Resource
 
   resource_name :object_id
+  resource_class :class_2
 
   # def method2(param1, param2, param3)    
   #   param1
@@ -37,6 +39,7 @@ class Class3
   include LiveResource::Resource
 
   resource_name :object_id
+  resource_class :class_3
 
   # def method3(param1)
   #   param1.upcase
@@ -47,7 +50,7 @@ class TestClass < Test::Unit::TestCase
   def setup
     Redis.new.flushall
 
-    LiveResource::redis_logger.level = Logger::DEBUG
+    LiveResource::RedisClient::logger.level = Logger::DEBUG
 
     # Class resources
     # LiveResource::register Class1
@@ -69,14 +72,14 @@ class TestClass < Test::Unit::TestCase
   end
 
   def test_find_instance
-    assert_equal 3, LiveResource::all(:class1).length
+    assert_equal 3, LiveResource::all(:class_1).length
 
-    assert_not_nil LiveResource.find(:class1, :fred)
-    assert_nil LiveResource.find(:class1, :alf)
+    assert_not_nil LiveResource.find(:class_1, :fred)
+    assert_nil LiveResource.find(:class_1, :alf)
   end
 
   def test_instances_have_methods
-    i = LiveResource::all(:class1).first
+    i = LiveResource::all(:class_1).first
 
     assert i.respond_to?(:method1), "instance does not respond to method1"
   end

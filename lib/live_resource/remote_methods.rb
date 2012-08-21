@@ -21,6 +21,14 @@ module LiveResource
     def running?
       @dispatcher && @dispatcher.running?
     end
+
+    # By default, all public methods of this class are remote callable.
+    def remote_methods
+      m = self.class.public_instance_methods
+
+      # Subtract methods inherited from our parent(s)
+      m - self.class.ancestors[1].public_instance_methods
+    end
   end
 end
 

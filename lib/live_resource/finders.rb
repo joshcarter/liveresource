@@ -1,48 +1,29 @@
 module LiveResource
   module Finders
 
-  def LiveResource.all(redis_class)
-    instances = []
-
-    redis.hgetall(redis_class.to_s).each_pair do |i, count|
-      instances << i if (count.to_i > 0)
+    def LiveResource.all(resource_class)
+      # FIXME: need to create ResourceProxy objects
+      RedisClient.new(resource_class, nil).all
     end
 
-    # FIXME: need to create clients here
-    instances
-  end
+    def LiveResource.find(resource_class, resource_name = nil, &block)
+      if resource_name.nil? and block.nil?
+        raise(ArgumentError, "must provide either name or matcher block")
+      end
 
-  # TODO: if block provided, need to iterate over all and let
-  # block decide what to do.
-  def LiveResource.find(redis_class, redis_instance)
-    count = redis.hget(redis_class.to_s, redis_instance.to_s)
+      if block.nil?
+        block = lambda { |name| name == resource_name.to_s ? name.to_s : nil }
+      end
 
-    # FIXME: create instance here
-    (count && count.to_i > 0) ? redis_instance : nil
-  end
+      RedisClient.new(resource_class, nil).all.each do |name|
+        found = block.call(name)
 
+        # FIXME: create ResourceProxy object here
+        return found if found
+      end
 
-  #   
-  # def self.each(type, &block)
-  #   
-  # end
-  # 
-  # def self.find(type, name = nil, &block)
-  #   if name.nil? and block.nil?
-  #     raise(ArgumentError, "must provide either name or matcher block")
-  #   end
-  # 
-  #   if block.nil?
-  #     block = lamda { |i| i.name == name ? i : nil }
-  #   end
-  # 
-  #   each(type) do |instance|
-  #     found = block.call(instance)
-  #     return found if found
-  #   end
-  # end
-    
-
-
+      nil
+    end
   end
 end
+

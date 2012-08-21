@@ -1,11 +1,25 @@
 module LiveResource
   class RedisClient
-    def register(resource)
-      hincrby resource.redis_class, resource.redis_name, 1
+    def instances_key
+      "#{@redis_class}.instances"
     end
 
-    def unregister(resource)
-      hincrby resource.redis_class, resource.redis_name, -1
+    def register
+      hincrby instances_key, @redis_name, 1
+    end
+
+    def unregister
+      hincrby instances_key, @redis_name, -1
+    end
+
+    def all
+      names = []
+
+      hgetall(instances_key).each_pair do |i, count|
+        names << i if (count.to_i > 0)
+      end
+
+      names
     end
   end
 end

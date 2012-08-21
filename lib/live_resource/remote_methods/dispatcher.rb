@@ -5,18 +5,15 @@ module LiveResource
   class RemoteMethodDispatcher
     include LogHelper
 
-    attr_reader :thread, :resource
+    attr_reader :thread, :resource, :redis
     EXIT_TOKEN = 'exit'
 
     def initialize(resource)
       @resource = resource
+      @redis = RedisClient.new(@resource.resource_class, @resource.resource_name)
       @thread = nil
 
       start
-    end
-
-    def redis
-      LiveResource::redis
     end
 
     def start
@@ -28,7 +25,7 @@ module LiveResource
     def stop
       return if @thread.nil?
 
-      redis.method_push @resource, EXIT_TOKEN
+      redis.method_push EXIT_TOKEN
       @thread.join
       @thread = nil
     end
@@ -40,16 +37,19 @@ module LiveResource
     def run
       info("#{self} method dispatcher starting")
 
+      # Register methods used by this resource class
+      redis.register_methods @resource.remote_methods
+
       # Need to register our class and instance in Redis so the finders
       # (all, any, etc.) will work.
-      redis.register @resource
+      redis.register
 
       begin
         loop do
-          token = redis.method_wait @resource
+          token = redis.method_wait
 
           if token == EXIT_TOKEN
-            redis.method_done @resource, token
+            redis.method_done token
             break
           end
 
@@ -58,7 +58,7 @@ module LiveResource
         # NOTE: if this process crashes outright, or we lose network
         # connection to Redis, or whatever -- this decrement won't occur.
         # Supervisor should clean up where possible.
-        redis.unregister @resource
+        redis.unregister
 
         info("#{self} method dispatcher exiting")
       end

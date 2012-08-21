@@ -11,6 +11,10 @@ module LiveResource
         raise "can't get resource name for #{self.class.to_s}"
       end
     end
+
+    def resource_class
+      self.class.resource_class
+    end
   end
 
   module Resource

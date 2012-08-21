@@ -11,8 +11,7 @@ module LiveResource
     def initialize(redis_class, redis_name)
       @redis_class = redis_class
       @redis_name = redis_name
-      @remote_methods =
-        redis.lrange("class.#{redis_class}", 0, -1)
+      @remote_methods = redis.registered_methods #FIXME: need redis client with redis_class, _name
     end
 
     def redis_class
