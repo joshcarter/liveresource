@@ -25,9 +25,13 @@ module LiveResource
     # By default, all public methods of this class are remote callable.
     def remote_methods
       m = self.class.public_instance_methods
+      ancestors = self.class.ancestors.drop(1)
 
       # Subtract methods inherited from our parent(s)
-      m - self.class.ancestors[1].public_instance_methods
+      ancestors.each do |ancestor|
+        m = m - ancestor.public_instance_methods
+      end
+      m
     end
   end
 end
