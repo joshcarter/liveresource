@@ -11,11 +11,11 @@ class C
   def generate_debug
     debug "my debug message"
   end
-  
+
   def generate_fatal
     fatal "my fatal message"
   end
-  
+
   def dump
     @log_backend.rewind
     @log_backend.readlines
@@ -26,14 +26,14 @@ class LoggerTest < Test::Unit::TestCase
   def test_basic_logging
     c = C.new
     c.generate_fatal
-    
+
     assert_match "my fatal message", c.dump[0]
   end
-  
+
   def test_changing_log_levels
     c = C.new
     c.logger.level = Logger::WARN
-    
+
     c.generate_debug
     assert_equal 0, c.dump.length
 

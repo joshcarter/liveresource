@@ -44,7 +44,7 @@ module LiveResource
       lrem methods_in_progress_list, 0, token
     end
 
-    def method_send(method, params)
+    def method_send(method, params, flags = {})
       # Choose unique token for this action; retry if token is already in
       # use by another action.
       token = nil
@@ -54,7 +54,8 @@ module LiveResource
         break if hsetnx(method_details(token), :method, method)
       end
 
-      hset method_details(token), :params, params
+      hset method_details(token), :params, serialize(params)
+      hset method_details(token), :flags, serialize(flags)
       method_push token
       token
     end
@@ -62,8 +63,9 @@ module LiveResource
     def method_get(token)
       method = hget method_details(token), :method
       params = hget method_details(token), :params
+      flags = hget method_details(token), :flags
 
-      [method.to_sym, deserialize(params)]
+      [method.to_sym, deserialize(params), deserialize(flags)]
     end
 
     def method_result(token, result)
@@ -110,6 +112,11 @@ module LiveResource
         # Clear out original method call details
         del method_details(token)
       end
+    end
+
+    def method_discard_result(token)
+      del result_details(token)
+      del method_details(token)
     end
 
     def method_done_with?(token)

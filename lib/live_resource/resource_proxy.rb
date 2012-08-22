@@ -31,15 +31,14 @@ module LiveResource
 
       if @remote_methods.include?(stripped_method)
         if method.match(/!$/)
-          # TODO: where do we clean up the method?
-          raise ArgumentError.new("can't handle async/no-future methods yet")
+          remote_send stripped_method, params, { :discard_result => true }
         elsif method.match(/\?$/)
           # Async call with future
-          token = remote_send_async stripped_method, params
+          token = remote_send stripped_method, params, {}
           Future.new(self, token)
         else
           # Synchronous method call
-          remote_send(method, params)
+          wait_for_done remote_send(method, params, {})
         end
       else
         super
@@ -52,17 +51,8 @@ module LiveResource
       @remote_methods.include?(stripped_method)
     end
 
-    def remote_send(method, *params)
-      wait_for_done remote_send_async(method, *params)
-    end
-
-    def remote_send_with_timeout(method, timeout, *params)
-      token = remote_send_async(method, *params)
-      wait_for_done(token, timeout)
-    end
-
-    def remote_send_async(method, *params)
-      @redis.method_send(method, params)
+    def remote_send(method, params, flags)
+      @redis.method_send(method, params, flags)
     end
 
     def wait_for_done(token, timeout = 0)

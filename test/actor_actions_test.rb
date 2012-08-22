@@ -88,6 +88,21 @@ class TestClass < Test::Unit::TestCase
     assert i.respond_to?(:method1), "instance does not respond to method1"
   end
 
+  def test_instances_have_async_methods
+    i = LiveResource::all(:class_1).first
+
+    assert i.respond_to?(:method1!), "instance does not respond to method1!"
+    assert i.respond_to?(:method1?), "instance does not respond to method1?"
+  end
+
+  def test_instance_does_not_respond_to_invalid_methods
+    i = LiveResource::all(:class_1).first
+
+    assert !i.respond_to?(:method23), "instance should not respond to method23"
+    assert !i.respond_to?(:method23!), "instance should not respond to method23!"
+    assert !i.respond_to?(:method23?), "instance should not respond to method23?"
+  end
+
   def test_message_path
     assert_equal 5, LiveResource::find(:class_1, :bob).method1(2, 3)
   end
