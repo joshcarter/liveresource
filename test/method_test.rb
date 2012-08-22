@@ -106,80 +106,85 @@ class MethodTest < Test::Unit::TestCase
   end
 
 
-#   def test_async_wait_for_done
-#     with_servers do
-#       client = Client.new
+  def test_method_call_with_future
+    starting_keys = Redis.new.dbsize
+    client = LiveResource::any(:server)
 
-#       token = client.remote_send_async(:slow_upcase, 'foobar')
+    value = client.slow_upcase? 'foobar'
 
-#       assert_not_nil token
-#       assert_equal false, client.done_with?(token)
+    assert_not_nil value
+    assert_equal false, value.done?
 
-#       # Wait for valid result.
-#       assert_equal 'FOOBAR', client.wait_for_done(token)
+    # Wait for valid result.
+    assert_equal 'FOOBAR', value.value
 
-#       # After waiting for done, resource doesn't know anything about
-#       # the token anymore.
-#       assert_raise(ArgumentError) do
-#         client.done_with?(token)
-#       end
-#     end
-#   end
+    # Should have no junk left over in Redis, BUT we can still get the
+    # future's value as many times as we want.
+    assert_equal starting_keys, Redis.new.dbsize
+    assert_equal 'FOOBAR', value.value
+  end
 
-#   # Similar test to above, but in this case we don't wait for done until
-#   # after we already know the action is done.
-#   def test_wait_for_done_after_done
-#     with_servers do
-#       # Repeat a bunch of times -- this helps catch a race
-#       # condition in done_with?
-#       100.times do
-#         client = Client.new
+  # Similar test to above, but in this case we don't wait for done until
+  # after we already know the action is done.
+  def test_wait_for_done_after_done
+    client = LiveResource::any(:server)
 
-#         token = client.remote_send_async(:slow_upcase, 'foobar')
+    # Repeat a bunch of times -- this helps catch a race
+    # condition in done_with?
+    100.times do
+      value = client.slow_upcase? 'foobar'
 
-#         while !client.done_with?(token)
-#           Thread.pass
-#         end
+      while !value.done?
+        Thread.pass
+      end
 
-#         # Result should be ready for us
-#         assert_equal 'FOOBAR', client.wait_for_done(token)
-#       end
-#     end
-#   end
+      # Result should be ready for us
+      assert_equal 'FOOBAR', value.value
+    end
+  end
 
-#   def test_method_timeout_success
-#     with_servers do
-#       client = Client.new
+  def test_method_timeout_success
+    client = LiveResource::any(:server)
+    value = client.upcase? "foobar"
 
-#       assert_equal "FOOBAR", client.remote_send_with_timeout(:upcase, 1, "foobar")
-#     end
-#   end
+    assert_equal "FOOBAR", value.value(1)
+  end
 
-#   def test_method_timeout_failure
-#     # No servers
-#     client = Client.new
+  def test_method_timeout_failure
+    client = LiveResource::any(:server)
 
-#     assert_raise(RuntimeError) do
-#       client.remote_send_with_timeout(:upcase, 1, "foobar")
-#     end
+    LiveResource::stop # No servers
 
-#     # Should have no junk left over in Redis
-#     assert_equal 0, Redis.new.dbsize
-#   end
+    starting_keys = Redis.new.dbsize
 
-#   def test_method_completes_after_timeout
-#     with_servers do
-#       client = Client.new
+    assert_raise(RuntimeError) do
+      value = client.upcase? "foobar"
+      value.value(1)
+    end
 
-#       # This will fail (as above) but the server will actually complete it a second
-#       # later. Need to make sure server cleans up ok.
-#       assert_raise(RuntimeError) do
-#         client.remote_send_with_timeout(:two_second_upcase, 1, "foobar")
-#       end
-#     end
+    # Should have no junk left over in Redis
+    assert_equal starting_keys, Redis.new.dbsize
+  end
 
-#     # Should have no junk left over in Redis
-#     assert_equal 0, Redis.new.dbsize
-#   end
+  def test_method_completes_after_timeout
+    starting_keys = Redis.new.dbsize
+    client = LiveResource::any(:server)
 
+    # Turn up log level; this test will generate an appropriate warning.
+    old_level = LiveResource::RedisClient.logger.level = Logger::ERROR
+
+    # This will fail (as above) but the server will actually complete it a second
+    # later. Need to make sure server cleans up ok.
+    assert_raise(RuntimeError) do
+      value = client.two_second_upcase? "foobar"
+      value.value(1)
+    end
+
+    sleep 2
+
+    # Should have no junk left over in Redis
+    assert_equal starting_keys, Redis.new.dbsize
+
+    LiveResource::RedisClient.logger.level = old_level
+  end
 end
