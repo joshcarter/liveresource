@@ -120,7 +120,7 @@ module LiveResource
       multi
       lrange methods_list, 0, -1
       lrange methods_in_progress_list, 0, -1
-      lrange result_details 0, -1
+      lrange result_details(token), 0, -1
       result = exec
 
       if (result[2] != [])

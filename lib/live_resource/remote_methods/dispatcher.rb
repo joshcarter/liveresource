@@ -12,6 +12,7 @@ module LiveResource
       @resource = resource
       @redis = RedisClient.new(@resource.resource_class, @resource.resource_name)
       @thread = nil
+      @running = false
 
       start
     end
@@ -31,7 +32,13 @@ module LiveResource
     end
 
     def running?
-      @thread != nil
+      (@thread != nil) && @running
+    end
+
+    def wait_for_running
+      while !running? do
+        Thread.pass
+      end
     end
 
     def run
@@ -43,6 +50,8 @@ module LiveResource
       # Need to register our class and instance in Redis so the finders
       # (all, any, etc.) will work.
       redis.register
+
+      @running = true
 
       begin
         loop do

@@ -1,5 +1,6 @@
 require_relative 'log_helper'
 require_relative 'redis_client'
+require_relative 'future'
 
 module LiveResource
   # Returned from LiveResource finder methods (all, find, etc), acts as a
@@ -25,21 +26,31 @@ module LiveResource
     end
 
     def method_missing(method, *params, &block)
-      # TODO: check for methods ending in !, ? -- make those call variants
-      # of remote_send.
+      # Strip trailing ?, ! for seeing if we support method
+      stripped_method = method.to_s.sub(/[!,?]$/, '').to_sym
 
-      if @remote_methods.include?(method)
-        remote_send(method, params)
+      if @remote_methods.include?(stripped_method)
+        if method.match(/!$/)
+          # TODO: where do we clean up the method?
+          raise ArgumentError.new("can't handle async/no-future methods yet")
+        elsif method.match(/\?$/)
+          # Async call with future
+          token = remote_send_async stripped_method, params
+          Future.new(self, token)
+        else
+          # Synchronous method call
+          remote_send(method, params)
+        end
       else
         super
       end
     end
 
     def respond_to_missing?(method, include_private)
-      @remote_methods.include?(method)
-    end
+      stripped_method = method.to_s.sub(/[!,?]$/, '').to_sym
 
-    private
+      @remote_methods.include?(stripped_method)
+    end
 
     def remote_send(method, *params)
       wait_for_done remote_send_async(method, *params)
@@ -51,9 +62,6 @@ module LiveResource
     end
 
     def remote_send_async(method, *params)
-      # TODO: return future here. Calling future.value will be the same as
-      # calling wait_for_done(timeout) in the current model.
-
       @redis.method_send(method, params)
     end
 
@@ -77,6 +85,8 @@ module LiveResource
     def done_with?(token)
       @redis.method_done_with? token
     end
+
+    private
 
     # Merge the stack trace from the method sendor and method
     # provider so it looks like one, seamless stack trace.
