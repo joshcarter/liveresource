@@ -2,7 +2,7 @@ require_relative 'live_resource/resource'
 
 module LiveResource
   def self.register(resource)
-    puts "registering #{resource.to_s}"
+    # puts "registering #{resource.to_s}"
 
     @@resources ||= []
     @@resources << resource
@@ -11,7 +11,7 @@ module LiveResource
   end
 
   def self.unregister(resource)
-    puts "unregistering #{resource.to_s}"
+    # puts "unregistering #{resource.to_s}"
 
     resource.stop
 

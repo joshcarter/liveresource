@@ -13,7 +13,7 @@ module LiveResource
     end
 
     def register_methods(methods)
-      sadd remote_methods_key, methods.join(" ")
+      sadd remote_methods_key, methods
     end
 
     def registered_methods

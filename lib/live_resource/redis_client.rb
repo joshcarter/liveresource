@@ -23,10 +23,14 @@ module LiveResource
     include LogHelper
     attr_writer :redis
 
+    @@logger = Logger.new(STDERR)
+    @@logger.level = Logger::WARN
+
     def initialize(resource_class, resource_name)
-      @redis_class = redisized_key(resource_class)
-      @redis_name = redisized_key(resource_name)
-      @logger = self.class.logger
+      @redis_class = RedisClient.redisized_key(resource_class)
+      @redis_name = RedisClient.redisized_key(resource_name)
+
+      self.logger = self.class.logger
 
       info("new redis client: #{resource_class} -> #{@redis_class}, #{resource_name} ->#{@redis_name}")
     end
@@ -65,7 +69,6 @@ module LiveResource
     end
 
     def self.logger
-      @@logger ||= Logger.new(STDERR)
       @@logger
     end
 
@@ -73,9 +76,7 @@ module LiveResource
       @@logger = logger
     end
 
-    private
-
-    def redisized_key(word)
+    def self.redisized_key(word)
       word = word.to_s.dup
       word.gsub!(/([A-Z\d]+)([A-Z][a-z])/,'\1_\2')
       word.gsub!(/([a-z\d])([A-Z])/,'\1_\2')

@@ -30,9 +30,9 @@ class Class2
   resource_name :object_id
   resource_class :class_2
 
-  # def method2(param1, param2, param3)    
-  #   param1
-  # end
+  def method2(param1, param2, param3)
+    param1
+  end
 end
 
 class Class3
@@ -41,16 +41,16 @@ class Class3
   resource_name :object_id
   resource_class :class_3
 
-  # def method3(param1)
-  #   param1.upcase
-  # end
+  def method3(param1)
+    param1.upcase
+  end
 end
 
 class TestClass < Test::Unit::TestCase
   def setup
     Redis.new.flushall
 
-    LiveResource::RedisClient::logger.level = Logger::DEBUG
+    LiveResource::RedisClient.logger.level = Logger::WARN
 
     # Class resources
     # LiveResource::register Class1
@@ -58,7 +58,7 @@ class TestClass < Test::Unit::TestCase
     # LiveResource::register Class3
 
     # Instance resources
-    LiveResource::register Class1.new("bob")
+    obj1 = LiveResource::register Class1.new("bob")
     LiveResource::register Class1.new("sue")
     LiveResource::register Class1.new("fred")
     LiveResource::register Class2.new
@@ -76,6 +76,12 @@ class TestClass < Test::Unit::TestCase
 
     assert_not_nil LiveResource.find(:class_1, :fred)
     assert_nil LiveResource.find(:class_1, :alf)
+
+    proxy = LiveResource.find(:class_1) do |name|
+      name == "bob" ? name : nil
+    end
+
+    assert_equal "bob", proxy.redis_name
   end
 
   def test_instances_have_methods

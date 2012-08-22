@@ -10,12 +10,15 @@ module LiveResource
       else
         @dispatcher = RemoteMethodDispatcher.new(self)
       end
+
+      self
     end
 
     def stop
       return if @dispatcher.nil?
 
       @dispatcher.stop
+      self
     end
 
     def running?

@@ -6,12 +6,14 @@ module LiveResource
   # proxy to a remote resource.
   class ResourceProxy
     include LiveResource::LogHelper
-    include LiveResource::HasRedisClient
+
+    attr_reader :redis_class, :redis_name
 
     def initialize(redis_class, redis_name)
       @redis_class = redis_class
       @redis_name = redis_name
-      @remote_methods = redis.registered_methods #FIXME: need redis client with redis_class, _name
+      @redis = RedisClient.new(redis_class, redis_name)
+      @remote_methods = @redis.registered_methods
     end
 
     def redis_class
@@ -30,9 +32,8 @@ module LiveResource
       end
     end
 
-    def respond_to?(method)
-      return true if @remote_methods.include?(method)
-      super
+    def respond_to_missing?(method, include_private)
+      @remote_methods.include?(method)
     end
   end
 end

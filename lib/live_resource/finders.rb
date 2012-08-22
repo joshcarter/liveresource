@@ -1,9 +1,14 @@
+require_relative 'resource_proxy'
+
 module LiveResource
   module Finders
 
     def LiveResource.all(resource_class)
-      # FIXME: need to create ResourceProxy objects
-      RedisClient.new(resource_class, nil).all
+      redis_names = RedisClient.new(resource_class, nil).all
+
+      redis_names.map do |redis_name|
+        ResourceProxy.new(RedisClient.redisized_key(resource_class), redis_name)
+      end
     end
 
     def LiveResource.find(resource_class, resource_name = nil, &block)
@@ -15,14 +20,15 @@ module LiveResource
         block = lambda { |name| name == resource_name.to_s ? name.to_s : nil }
       end
 
-      RedisClient.new(resource_class, nil).all.each do |name|
-        found = block.call(name)
-
-        # FIXME: create ResourceProxy object here
-        return found if found
+      redis_name = RedisClient.new(resource_class, nil).all.find do |name|
+        block.call(name)
       end
 
-      nil
+      if redis_name
+        ResourceProxy.new(RedisClient.redisized_key(resource_class), redis_name)
+      else
+        nil
+      end
     end
   end
 end
