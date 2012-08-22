@@ -30,6 +30,12 @@ module LiveResource
         nil
       end
     end
+
+    def LiveResource.any(resource_class)
+      resources = all(resource_class)
+
+      resources[rand(resources.length)]
+    end
   end
 end
 

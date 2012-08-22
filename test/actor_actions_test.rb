@@ -63,8 +63,6 @@ class TestClass < Test::Unit::TestCase
     LiveResource::register Class1.new("fred")
     LiveResource::register Class2.new
     LiveResource::register Class3.new
-
-    10.times { Thread.pass } # Let method dispatchers start
   end
 
   def teardown

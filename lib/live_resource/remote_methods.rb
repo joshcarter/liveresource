@@ -11,6 +11,8 @@ module LiveResource
         @dispatcher = RemoteMethodDispatcher.new(self)
       end
 
+      @dispatcher.wait_for_running
+
       self
     end
 
