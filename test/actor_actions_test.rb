@@ -50,7 +50,7 @@ class TestClass < Test::Unit::TestCase
   def setup
     Redis.new.flushall
 
-    LiveResource::RedisClient.logger.level = Logger::WARN
+    LiveResource::RedisClient.logger.level = Logger::INFO
 
     # Class resources
     # LiveResource::register Class1
@@ -90,9 +90,7 @@ class TestClass < Test::Unit::TestCase
     assert i.respond_to?(:method1), "instance does not respond to method1"
   end
 
-  # def test_message_path
-    # v = LiveResource::any(:class_1).method1? "foo", "bar"
-    #
-    # assert_equal "FOO", v.value
-  # end
+  def test_message_path
+    assert_equal 5, LiveResource::find(:class_1, :bob).method1(2, 3)
+  end
 end

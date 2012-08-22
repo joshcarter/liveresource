@@ -31,16 +31,11 @@ module LiveResource
       @redis_name = RedisClient.redisized_key(resource_name)
 
       self.logger = self.class.logger
-
-      info("new redis client: #{resource_class} -> #{@redis_class}, #{resource_name} ->#{@redis_name}")
     end
 
     def method_missing(method, *params, &block)
       if self.class.redis.respond_to? method
-        debug ">>", method.to_s, *params
-        response = self.class.redis.send(method, *params, &block)
-        debug "<<", response
-        response
+        redis_command(method, params, &block)
       else
         super
       end
@@ -49,6 +44,11 @@ module LiveResource
     def respond_to?(method)
       return true if self.class.redis.respond_to?(method)
       super
+    end
+
+    # Override default (Ruby) exec with Redis exec.
+    def exec
+      redis_command(:exec, nil)
     end
 
     def self.redis
@@ -84,6 +84,15 @@ module LiveResource
       word.gsub!('::', '-')
       word.downcase!
       word
+    end
+
+    private
+
+    def redis_command(method, params, &block)
+      debug ">>", method.to_s, *params
+      response = self.class.redis.send(method, *params, &block)
+      debug "<<", response
+      response
     end
   end
 end

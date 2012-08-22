@@ -53,6 +53,21 @@ module LiveResource
             break
           end
 
+          method, params = redis.method_get(token)
+
+          info "method: #{method.inspect}"
+          info "params: #{params.inspect}"
+
+          begin
+            method = validate_method(method, params)
+
+            redis.method_result token, method.call(*params)
+          rescue Exception => e
+            debug "Method #{token} failed:", e.message
+            redis.method_result token, e
+          end
+
+          redis.method_done token
         end
       ensure
         # NOTE: if this process crashes outright, or we lose network
@@ -62,6 +77,31 @@ module LiveResource
 
         info("#{self} method dispatcher exiting")
       end
+    end
+
+    private
+
+    # Verify validity of remote method being called
+    def validate_method(method_sym, params)
+      unless @resource.remote_methods.include?(method_sym)
+        raise NoMethodError.new("Undefined method `#{method_sym}'")
+      end
+
+      method = @resource.method(method_sym)
+
+      if (method.arity != 0 && params.nil?)
+        raise ArgumentError.new("wrong number of arguments to `#{method_sym}'" \
+                      "(0 for #{method.arity})")
+      end
+
+      if (method.arity > 0 and method.arity != params.length) or
+          (method.arity < 0 and method.arity.abs != params.length and
+          (method.arity.abs - 1) != params.length)
+        raise ArgumentError.new("wrong number of arguments to `#{method_sym}'" \
+                      "(#{params.length} for #{method.arity})")
+      end
+
+      method
     end
   end
 end
