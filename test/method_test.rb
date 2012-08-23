@@ -1,5 +1,14 @@
 require_relative 'test_helper'
 
+class MyClass
+  attr_accessor :a, :b
+
+  def initialize(a, b)
+    @a = a
+    @b = b
+  end
+end
+
 # We slice, we dice, we can cut through tin cans!
 class Server
   include LiveResource::Resource
@@ -31,6 +40,13 @@ class Server
 
   def reverse(arr)
     arr.reverse
+  end
+
+  def swap_a_b(myclass)
+    a, b = myclass.a, myclass.b
+    myclass.b = a
+    myclass.a = b
+    myclass
   end
 end
 
@@ -81,9 +97,28 @@ class MethodTest < Test::Unit::TestCase
     # Two parameters
     assert_equal 3, client.add(1, 2)
 
+    # Non-native class
+    myclass = client.swap_a_b MyClass.new("a", "b")
+    assert_equal "b", myclass.a
+    assert_equal "a", myclass.b
+
     # Should have no junk left over in Redis
     assert_equal starting_keys, Redis.new.dbsize
   end
+
+  def test_method_with_no_response
+    starting_keys = Redis.new.dbsize
+    client = LiveResource::any(:server)
+
+    # Do one async call; dispatcher should auto-clean up
+    client.upcase! "foobar"
+
+    # Do a sync call afterward to make sure the first is done
+    client.upcase "foobar"
+
+    assert_equal starting_keys, Redis.new.dbsize
+  end
+
 
   def test_no_matching_method
     client = LiveResource::any(:server)

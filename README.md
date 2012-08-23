@@ -4,10 +4,11 @@ LiveResource 2
 
 TODO:
 
+- Bang methods with cleanup
 - Class-level resource
 - Attributes
 - Forward/continue methods
-- Benchmarking
+- Benchmarking: try multiple redis clients
 
 
 

@@ -62,10 +62,11 @@ module LiveResource
             break
           end
 
-          method, params = redis.method_get(token)
+          method, params, flags = redis.method_get(token)
 
-          info "method: #{method.inspect}"
-          info "params: #{params.inspect}"
+          # puts "method: #{method.inspect}"
+          # puts "params: #{params.inspect}"
+          # puts "flags: #{flags.inspect}"
 
           begin
             method = validate_method(method, params)
@@ -77,6 +78,7 @@ module LiveResource
           end
 
           redis.method_done token
+          redis.method_discard_result(token) if flags[:discard_result]
         end
       ensure
         # NOTE: if this process crashes outright, or we lose network
