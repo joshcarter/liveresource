@@ -1,5 +1,19 @@
-LiveResource
-============
+LiveResource 2
+==============
+
+
+TODO:
+
+- Class-level resource
+- Attributes
+- Forward/continue methods
+- Benchmarking
+
+
+
+
+(old stuff below)
+
 
 LiveResource is a framework for coordinating processes and status within a distributed system. It provides the following abilities:
 

@@ -12,7 +12,7 @@ end
 
 Rake::TestTask.new :benchmark do |benchmark|
   benchmark.verbose = false
-  benchmark.options = '--verbose=s'
+	#  benchmark.options = '--verbose=s'
   benchmark.test_files = ['benchmark/*_benchmark.rb']
 end
 

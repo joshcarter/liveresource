@@ -2,13 +2,14 @@ require 'rubygems'
 require 'test/unit'
 require 'thread'
 require 'pp'
-require 'live_resource'
 require 'benchmark'
+
+require_relative '../lib/live_resource'
 
 Thread.abort_on_exception = true
 
 class String
-  def pad(pad_to = 50)
+  def pad(pad_to = 70)
     self.ljust(pad_to)
   end
 
