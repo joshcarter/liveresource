@@ -27,6 +27,7 @@ module LiveResource
       return if @thread.nil?
 
       redis.method_push EXIT_TOKEN
+      @running = false
       @thread.join
       @thread = nil
     end

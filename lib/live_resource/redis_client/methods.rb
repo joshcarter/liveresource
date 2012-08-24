@@ -3,7 +3,11 @@ require 'yaml'
 module LiveResource
   class RedisClient
     def remote_methods_key
-      "#{@redis_class}.methods"
+      if @redis_class == "class"
+        "#{@redis_name}.class_methods"
+      else
+        "#{@redis_class}.methods"
+      end
     end
 
     def methods_list
@@ -23,7 +27,9 @@ module LiveResource
     end
 
     def register_methods(methods)
-      sadd remote_methods_key, methods
+      unless methods.empty?
+        sadd remote_methods_key, methods
+      end
     end
 
     def registered_methods

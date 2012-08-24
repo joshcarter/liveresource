@@ -1,61 +1,61 @@
 require_relative 'test_helper'
 
-class Class1
-  include LiveResource::Resource
+class ForwardContinueTest < Test::Unit::TestCase
+  class Class1
+    include LiveResource::Resource
 
-  attr_reader :name
-  resource_name :name
-  resource_class :class_1
+    attr_reader :name
+    resource_name :name
+    resource_class :class_1
 
-  def initialize(name)
-    @name = name
+    def initialize(name)
+      @name = name
+    end
+
+    def method1(param1, param2)
+      param1 + param2
+    end
+
+    # def method1(param1, param2)
+    #   to1 = LiveResource::any(:class_2)
+    #   to2 = LiveResource::any(:class_3)
+    #   param3 = "baz"
+    #
+    #   forward(to1, param1, param2, param3).continue(to2)
+    # end
   end
 
-  def method1(param1, param2)
-    param1 + param2
+  class Class2
+    include LiveResource::Resource
+
+    resource_name :object_id
+    resource_class :class_2
+
+    def method2(param1, param2, param3)
+      param1
+    end
   end
 
-  # def method1(param1, param2)
-  #   to1 = LiveResource::any(:class_2)
-  #   to2 = LiveResource::any(:class_3)
-  #   param3 = "baz"
-  #
-  #   forward(to1, param1, param2, param3).continue(to2)
-  # end
-end
+  class Class3
+    include LiveResource::Resource
 
-class Class2
-  include LiveResource::Resource
+    resource_name :object_id
+    resource_class :class_3
 
-  resource_name :object_id
-  resource_class :class_2
-
-  def method2(param1, param2, param3)
-    param1
+    def method3(param1)
+      param1.upcase
+    end
   end
-end
 
-class Class3
-  include LiveResource::Resource
-
-  resource_name :object_id
-  resource_class :class_3
-
-  def method3(param1)
-    param1.upcase
-  end
-end
-
-class TestClass < Test::Unit::TestCase
   def setup
     Redis.new.flushall
 
     LiveResource::RedisClient.logger.level = Logger::INFO
 
     # Class resources
-    # LiveResource::register Class1
-    # LiveResource::register Class2
-    # LiveResource::register Class3
+    LiveResource::register Class1
+    LiveResource::register Class2
+    LiveResource::register Class3
 
     # Instance resources
     obj1 = LiveResource::register Class1.new("bob")
