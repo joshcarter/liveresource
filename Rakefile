@@ -7,7 +7,7 @@ task :default => [:test]
 
 Rake::TestTask.new :test do |test|
   test.verbose = false
-  test.test_files = ['test/*_test.rb']
+  test.test_files = ['test/*_test.rb'].sort
 end
 
 Rake::TestTask.new :benchmark do |benchmark|

@@ -9,5 +9,11 @@ module LiveResource
     include LiveResource::Declarations
     include LiveResource::Finders
     include LiveResource::RemoteMethods
+
+    def self.included(base)
+      base.extend(LiveResource::RemoteMethods)
+      base.extend(LiveResource::Declarations::ClassMethods)
+      base.extend(LiveResource::RemoteMethods::ClassMethods)
+    end
   end
 end

@@ -3,7 +3,7 @@ module LiveResource
     def resource_name
       # Class-level resource_name is an attribute we fetch to determine
       # the instance's name
-      attr = self.class.resource_name
+      attr = self.class.instance_variable_get(:@resource_name)
 
       if attr
         self.send(attr)
@@ -13,29 +13,25 @@ module LiveResource
     end
 
     def resource_class
-      self.class.resource_class
-    end
-  end
-
-  module Resource
-    def self.included(base)
-      base.extend(ClassMethods)
+      self.class.instance_variable_get(:@resource_class)
     end
 
     module ClassMethods
+      # FIXME: comment this
       def resource_name(attribute_name = nil)
         if attribute_name
           @resource_name = attribute_name.to_sym
         else
-          @resource_name
+          @resource_class
         end
       end
 
+      # FIXME: comment this
       def resource_class(class_name = nil)
         if class_name
           @resource_class = class_name
         else
-          @resource_class ||= self.class
+          "class"
         end
       end
     end

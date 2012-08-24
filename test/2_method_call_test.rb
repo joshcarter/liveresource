@@ -1,56 +1,56 @@
 require_relative 'test_helper'
 
-class MyClass
-  attr_accessor :a, :b
-
-  def initialize(a, b)
-    @a = a
-    @b = b
-  end
-end
-
-# We slice, we dice, we can cut through tin cans!
-class Server
-  include LiveResource::Resource
-
-  resource_class :server
-  resource_name :object_id
-
-  def meaning
-    42
-  end
-
-  def upcase(str)
-    str.upcase
-  end
-
-  def slow_upcase(str)
-    10.times { Thread.pass }
-    str.upcase
-  end
-
-  def two_second_upcase(str)
-    sleep 2
-    str.upcase
-  end
-
-  def add(a, b)
-    a + b
-  end
-
-  def reverse(arr)
-    arr.reverse
-  end
-
-  def swap_a_b(myclass)
-    a, b = myclass.a, myclass.b
-    myclass.b = a
-    myclass.a = b
-    myclass
-  end
-end
-
 class MethodTest < Test::Unit::TestCase
+  class MyClass
+    attr_accessor :a, :b
+
+    def initialize(a, b)
+      @a = a
+      @b = b
+    end
+  end
+
+  # We slice, we dice, we can cut through tin cans!
+  class Server
+    include LiveResource::Resource
+
+    resource_class :server
+    resource_name :object_id
+
+    def meaning
+      42
+    end
+
+    def upcase(str)
+      str.upcase
+    end
+
+    def slow_upcase(str)
+      10.times { Thread.pass }
+      str.upcase
+    end
+
+    def two_second_upcase(str)
+      sleep 2
+      str.upcase
+    end
+
+    def add(a, b)
+      a + b
+    end
+
+    def reverse(arr)
+      arr.reverse
+    end
+
+    def swap_a_b(myclass)
+      a, b = myclass.a, myclass.b
+      myclass.b = a
+      myclass.a = b
+      myclass
+    end
+  end
+
   def setup
     Redis.new.flushall
 

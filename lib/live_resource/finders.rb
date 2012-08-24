@@ -13,7 +13,9 @@ module LiveResource
 
     def LiveResource.find(resource_class, resource_name = nil, &block)
       if resource_name.nil? and block.nil?
-        raise(ArgumentError, "must provide either name or matcher block")
+        # Find class resource instead of instance resource.
+        resource_name = resource_class
+        resource_class = "class"
       end
 
       if block.nil?
