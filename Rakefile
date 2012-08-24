@@ -1,6 +1,7 @@
 require 'rubygems'
 # require 'rake/package_task'
 require 'rake/testtask'
+require 'yard'
 
 desc "Default Task"
 task :default => [:test]
@@ -14,6 +15,10 @@ Rake::TestTask.new :benchmark do |benchmark|
   benchmark.verbose = false
 	#  benchmark.options = '--verbose=s'
   benchmark.test_files = ['benchmark/*_benchmark.rb']
+end
+
+YARD::Rake::YardocTask.new do |t|
+  t.files = ['lib/**/*.rb']
 end
 
 task :clean do

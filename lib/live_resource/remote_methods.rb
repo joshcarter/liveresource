@@ -5,6 +5,9 @@ module LiveResource
   module RemoteMethods
     attr_reader :dispatcher
 
+    # Start the method dispatcher for this resource. On return, the
+    # resource will be visible to finders (.all(), etc.)
+    # and remote methods may be called.
     def start
       if @dispatcher
         @dispatcher.start
@@ -36,6 +39,7 @@ module LiveResource
     end
 
     module ClassMethods
+      # Filtered list of remote-callable methods for an instance.
       def remote_instance_methods
         @remote_methods ||= Set.new
 
@@ -49,6 +53,8 @@ module LiveResource
         end
       end
 
+      # Filtered list of remote-callable methods for the resource
+      # class.
       def remote_singleton_methods
         @remote_singleton_methods ||= Set.new
 
@@ -72,18 +78,6 @@ module LiveResource
         @remote_singleton_methods << m
       end
     end
-
-#     # By default, all public methods of this class are remote callable.
-#     def remote_methods
-#       m = self.class.public_instance_methods
-#       ancestors = self.class.ancestors.drop(1)
-#
-#       # Subtract methods inherited from our parent(s)
-#       ancestors.each do |ancestor|
-#         m = m - ancestor.public_instance_methods
-#       end
-#       m
-#     end
   end
 end
 
