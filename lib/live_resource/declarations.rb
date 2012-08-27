@@ -29,9 +29,9 @@ module LiveResource
       # FIXME: comment this
       def resource_class(class_name = nil)
         if class_name
-          @resource_class = class_name
+          @resource_class = class_name.to_sym
         else
-          "class"
+          :class
         end
       end
     end

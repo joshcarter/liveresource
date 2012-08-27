@@ -53,9 +53,9 @@ class ForwardContinueTest < Test::Unit::TestCase
     LiveResource::RedisClient.logger.level = Logger::INFO
 
     # Class resources
-    # LiveResource::register Class1
-    # LiveResource::register Class2
-    # LiveResource::register Class3
+    LiveResource::register Class1
+    LiveResource::register Class2
+    LiveResource::register Class3
 
     # Instance resources
     obj1 = LiveResource::register Class1.new("bob")
