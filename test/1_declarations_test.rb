@@ -20,8 +20,7 @@ class TestClass < Test::Unit::TestCase
       obj = ruby_new(name)
       LiveResource::register obj
 
-      # Could we return an resource proxy here?
-      true
+      obj
     end
 
     def self.class_method1(param1, param2)
@@ -29,7 +28,7 @@ class TestClass < Test::Unit::TestCase
     end
 
     def method1(param1, param2)
-      param1 + param2
+      @name + param1 + param2
     end
 
     def self.private_class_method1
@@ -79,5 +78,12 @@ class TestClass < Test::Unit::TestCase
     class_resource.new("sue")
 
     assert_equal 3, LiveResource::all(:class_1).length
+  end
+
+  def test_new_returns_resource_proxy
+    class_resource = LiveResource::find(:class_1)
+    bob = class_resource.new("bob")
+
+    assert_equal "bob jones", bob.method1(" ", "jones")
   end
 end

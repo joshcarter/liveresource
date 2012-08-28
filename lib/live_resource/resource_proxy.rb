@@ -17,14 +17,6 @@ module LiveResource
       @remote_methods = @redis.registered_methods
     end
 
-    def redis_class
-      @redis_class
-    end
-
-    def redis_name
-      @redis_name
-    end
-
     def method_missing(method, *params, &block)
       # Strip trailing ?, ! for seeing if we support method
       stripped_method = method.to_s.sub(/[!,?]$/, '').to_sym
@@ -67,6 +59,9 @@ module LiveResource
 
         result.set_backtrace result.backtrace
         raise result
+      elsif result.is_a?(Hash) && result[:class] == 'ResourceProxy'
+        # Convert to resource proxy
+        ResourceProxy.new(result[:redis_class], result[:redis_name])
       else
         result
       end

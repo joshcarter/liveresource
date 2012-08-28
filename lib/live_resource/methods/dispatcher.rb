@@ -71,8 +71,16 @@ module LiveResource
 
           begin
             method = validate_method(method, params)
+            result = method.call(*params)
 
-            redis.method_result token, method.call(*params)
+            if result.is_a? Resource
+              # Return descriptor of a resource proxy instead
+              result = { :class => 'ResourceProxy',
+                :redis_class => result.dispatcher.redis.redis_class,
+                :redis_name => result.dispatcher.redis.redis_name }
+            end
+
+            redis.method_result token, result
           rescue Exception => e
             debug "Method #{token} failed:", e.message
             redis.method_result token, e

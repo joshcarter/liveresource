@@ -1,5 +1,13 @@
 module LiveResource
   module Attributes
+    def remote_attributes
+      if self.is_a? Class
+        remote_singleton_attributes
+      else
+        self.class.remote_instance_attributes
+      end
+    end
+
     def remote_modify(*attributes, &block)
 # TODO: support single attribute or list of attributes
 #

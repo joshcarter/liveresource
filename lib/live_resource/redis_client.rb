@@ -22,6 +22,7 @@ module LiveResource
   class RedisClient
     include LogHelper
     attr_writer :redis
+    attr_reader :redis_class, :redis_name
 
     @@logger = Logger.new(STDERR)
     @@logger.level = Logger::WARN

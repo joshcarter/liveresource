@@ -1,8 +1,8 @@
 require 'set'
-require_relative 'remote_methods/dispatcher'
+require_relative 'methods/dispatcher'
 
 module LiveResource
-  module RemoteMethods
+  module Methods
     attr_reader :dispatcher
 
     # Start the method dispatcher for this resource. On return, the
