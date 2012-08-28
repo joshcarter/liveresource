@@ -1,12 +1,8 @@
 LiveResource 2
 ==============
 
-
 TODO:
 
-- Class-level resource: need to separate classes, right now have
-  global "class." namespace.
-- Attributes
 - Forward/continue methods
 - Benchmarking: try multiple redis clients
 

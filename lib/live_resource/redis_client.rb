@@ -2,6 +2,7 @@ require 'rubygems'
 require 'redis'
 require 'yaml'
 require_relative 'log_helper'
+require_relative 'redis_client/attributes'
 require_relative 'redis_client/methods'
 require_relative 'redis_client/registration'
 
@@ -22,6 +23,7 @@ module LiveResource
   class RedisClient
     include LogHelper
     attr_writer :redis
+    attr_reader :redis_class, :redis_name
 
     @@logger = Logger.new(STDERR)
     @@logger.level = Logger::WARN

@@ -1,7 +1,8 @@
 require_relative 'log_helper'
 require_relative 'declarations'
 require_relative 'finders'
-require_relative 'remote_methods'
+require_relative 'attributes'
+require_relative 'methods'
 
 module LiveResource
 
@@ -13,15 +14,16 @@ module LiveResource
     include LiveResource::LogHelper
     include LiveResource::Declarations
     include LiveResource::Finders
-    include LiveResource::RemoteMethods
+    include LiveResource::Attributes
+    include LiveResource::Methods
 
     def self.included(base)
       base.extend(LiveResource::Declarations::ClassMethods)
-      base.extend(LiveResource::RemoteMethods::ClassMethods)
 
-      # The class is also extended with RemoteMethods support (i.e,
-      # the method dispatcher).
-      base.extend(LiveResource::RemoteMethods)
+      # The class is also extended with attribute and method support
+      # (i.e, the method dispatcher).
+      base.extend(LiveResource::Attributes)
+      base.extend(LiveResource::Methods)
     end
   end
 end
