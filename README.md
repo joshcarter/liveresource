@@ -1,10 +1,8 @@
 LiveResource 2
 ==============
 
-
 TODO:
 
-- Attributes
 - Forward/continue methods
 - Benchmarking: try multiple redis clients
 

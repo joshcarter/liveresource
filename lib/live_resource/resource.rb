@@ -19,10 +19,10 @@ module LiveResource
 
     def self.included(base)
       base.extend(LiveResource::Declarations::ClassMethods)
-      base.extend(LiveResource::Methods::ClassMethods)
 
-      # The class is also extended with RemoteMethods support (i.e,
-      # the method dispatcher).
+      # The class is also extended with attribute and method support
+      # (i.e, the method dispatcher).
+      base.extend(LiveResource::Attributes)
       base.extend(LiveResource::Methods)
     end
   end

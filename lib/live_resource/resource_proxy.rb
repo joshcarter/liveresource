@@ -15,13 +15,21 @@ module LiveResource
       @redis_name = redis_name
       @redis = RedisClient.new(redis_class, redis_name)
       @remote_methods = @redis.registered_methods
+      @remote_attributes = @redis.registered_attributes
     end
 
     def method_missing(method, *params, &block)
       # Strip trailing ?, ! for seeing if we support method
-      stripped_method = method.to_s.sub(/[!,?]$/, '').to_sym
+      stripped_method = method.to_s.sub(/[!,?,=]$/, '').to_sym
 
-      if @remote_methods.include?(stripped_method)
+      if @remote_attributes.include?(method)
+        # Attribute get/set
+        if method.match(/\=$/)
+          remote_attribute_write(stripped_method, params)
+        else
+          remote_attribute_read(method)
+        end
+      elsif @remote_methods.include?(stripped_method)
         if method.match(/!$/)
           remote_send stripped_method, params, { :discard_result => true }
         elsif method.match(/\?$/)
@@ -40,7 +48,8 @@ module LiveResource
     def respond_to_missing?(method, include_private)
       stripped_method = method.to_s.sub(/[!,?]$/, '').to_sym
 
-      @remote_methods.include?(stripped_method)
+      @remote_methods.include?(stripped_method) or
+        @remote_attributes.include?(method)
     end
 
     def remote_send(method, params, flags)
@@ -69,6 +78,14 @@ module LiveResource
 
     def done_with?(token)
       @redis.method_done_with? token
+    end
+
+    def remote_attribute_read(key, options = {})
+      @redis.attribute_read(key, options)
+    end
+
+    def remote_attribute_write(key, value, options = {})
+      @redis.attribute_write(key, value, options)
     end
 
     private

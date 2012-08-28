@@ -5,16 +5,19 @@ module LiveResource
   class RemoteMethodDispatcher
     include LogHelper
 
-    attr_reader :thread, :resource, :redis
+    attr_reader :thread, :resource
     EXIT_TOKEN = 'exit'
 
     def initialize(resource)
       @resource = resource
-      @redis = RedisClient.new(@resource.resource_class, @resource.resource_name)
       @thread = nil
       @running = false
 
       start
+    end
+
+    def redis
+      @resource.redis
     end
 
     def start
@@ -45,8 +48,9 @@ module LiveResource
     def run
       info("#{self} method dispatcher starting")
 
-      # Register methods used by this resource class
+      # Register methods and attributes used by this resource class
       redis.register_methods @resource.remote_methods
+      redis.register_attributes @resource.remote_attributes
 
       # Need to register our class and instance in Redis so the finders
       # (all, any, etc.) will work.

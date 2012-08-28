@@ -1,11 +1,27 @@
 module LiveResource
   module Attributes
+    def redis
+      @_redis ||= RedisClient.new(resource_class, resource_name)
+    end
+
     def remote_attributes
       if self.is_a? Class
-        remote_singleton_attributes
+        []
       else
         self.class.remote_instance_attributes
       end
+    end
+
+    def remote_attribute_read(key, options = {})
+      redis.attribute_read(key, options)
+    end
+
+    def remote_attribute_write(key, value, options = {})
+      if (key.to_sym == self.class.resource_name_attr) and !self.is_a?(Class)
+        @_redis = RedisClient.new(resource_class, value)
+      end
+
+      redis.attribute_write(key, value, options)
     end
 
     def remote_modify(*attributes, &block)

@@ -4,12 +4,20 @@ class TestClass < Test::Unit::TestCase
   class Class1
     include LiveResource::Resource
 
-    attr_reader :name
+    @@class_attr = 42
+
+    remote_reader :name
+    remote_writer :write_only
+    remote_accessor :accessor
+
     resource_name :name
     resource_class :class_1
 
     def initialize(name)
-      @name = name
+      remote_attribute_write(:name, name)
+
+      self.write_only = 'not yet written'
+      self.accessor = ""
     end
 
     class << self
@@ -28,7 +36,15 @@ class TestClass < Test::Unit::TestCase
     end
 
     def method1(param1, param2)
-      @name + param1 + param2
+      name + param1 + param2
+    end
+
+    def self.class_attr
+      @@class_attr
+    end
+
+    def self.class_attr=(new_value)
+      @@class_attr = new_value
     end
 
     def self.private_class_method1
@@ -36,6 +52,7 @@ class TestClass < Test::Unit::TestCase
     private_class_method :private_class_method1
 
     private
+
     def private_method1
     end
   end
@@ -53,10 +70,23 @@ class TestClass < Test::Unit::TestCase
     LiveResource::stop
   end
 
-  def test_correct_remote_class_methods
-    assert_equal [:new, :ruby_new, :class_method1].sort, Class1.remote_methods.sort
+  def test_correct_class_methods
+    assert_equal [:new, :ruby_new, :class_method1, :class_attr, :class_attr=].sort,
+    Class1.remote_methods.sort
+  end
 
-    assert_equal [:method1, :name].sort, Class1.ruby_new("foo").remote_methods.sort
+  # TODO: support class attributes (?)
+  # def test_correct_class_attributes
+  #   assert_equal [:class_attr], Class1.remote_attributes
+  # end
+
+  def test_correct_instance_methods
+    assert_equal [:method1], Class1.ruby_new("foo").remote_methods
+  end
+
+  def test_correct_instance_attributes
+    assert_equal [:name, :write_only=, :accessor, :accessor=].sort,
+    Class1.ruby_new("foo").remote_attributes.sort
   end
 
   def test_call_class_method
@@ -85,5 +115,16 @@ class TestClass < Test::Unit::TestCase
     bob = class_resource.new("bob")
 
     assert_equal "bob jones", bob.method1(" ", "jones")
+  end
+
+  def test_resource_proxy_can_get_attributes
+    class_resource = LiveResource::find(:class_1)
+    bob = class_resource.new("bob")
+
+    assert_equal "bob", bob.name
+    assert_equal "", bob.accessor
+
+    bob.accessor = "new value"
+    assert_equal "new value", bob.accessor
   end
 end
