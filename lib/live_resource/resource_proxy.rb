@@ -1,6 +1,7 @@
 require_relative 'log_helper'
 require_relative 'redis_client'
-require_relative 'future'
+require_relative 'methods/method'
+require_relative 'methods/future'
 
 module LiveResource
   # Returned from LiveResource finder methods (all, find, etc), acts as a
@@ -18,27 +19,37 @@ module LiveResource
       @remote_attributes = @redis.registered_attributes
     end
 
-    def method_missing(method, *params, &block)
+    def method_missing(m, *params, &block)
       # Strip trailing ?, ! for seeing if we support method
-      stripped_method = method.to_s.sub(/[!,?,=]$/, '').to_sym
+      sm = m.to_s.sub(/[!,?]$/, '').to_sym
 
-      if @remote_attributes.include?(method)
+      if @remote_attributes.include?(m)
         # Attribute get/set
-        if method.match(/\=$/)
-          remote_attribute_write(stripped_method, params)
+        if m.match(/\=$/)
+          m = m.to_s.sub(/\=$/, '').to_sym # Strip trailing equal
+
+          remote_attribute_write(m, params)
         else
-          remote_attribute_read(method)
+          remote_attribute_read(m)
         end
-      elsif @remote_methods.include?(stripped_method)
-        if method.match(/!$/)
-          remote_send stripped_method, params, { :discard_result => true }
-        elsif method.match(/\?$/)
+      elsif @remote_methods.include?(sm)
+        method = RemoteMethod.new(
+                              :method => sm,
+                              :params => params,
+                              :path => [ self ])
+
+        if m.match(/!$/)
+          # Async call, discard result
+          method.flags[:discard_result] = true
+
+          remote_send method
+        elsif m.match(/\?$/)
           # Async call with future
-          token = remote_send stripped_method, params, {}
-          Future.new(self, token)
+          method = remote_send method
+          Future.new(self, method)
         else
           # Synchronous method call
-          wait_for_done remote_send(method, params, {})
+          wait_for_done remote_send(method)
         end
       else
         super
@@ -52,12 +63,12 @@ module LiveResource
         @remote_attributes.include?(method)
     end
 
-    def remote_send(method, params, flags)
-      @redis.method_send(method, params, flags)
+    def remote_send(method)
+      @redis.method_send method
     end
 
-    def wait_for_done(token, timeout = 0)
-      result = @redis.method_wait_for_result(token, timeout)
+    def wait_for_done(method, timeout = 0)
+      result = @redis.method_wait_for_result(method, timeout)
 
       if result.is_a?(Exception)
         # Merge the backtrace from the passed exception with this
@@ -68,16 +79,13 @@ module LiveResource
 
         result.set_backtrace result.backtrace
         raise result
-      elsif result.is_a?(Hash) && result[:class] == 'ResourceProxy'
-        # Convert to resource proxy
-        ResourceProxy.new(result[:redis_class], result[:redis_name])
       else
         result
       end
     end
 
-    def done_with?(token)
-      @redis.method_done_with? token
+    def done_with?(method)
+      @redis.method_done_with? method
     end
 
     def remote_attribute_read(key, options = {})
@@ -86,6 +94,13 @@ module LiveResource
 
     def remote_attribute_write(key, value, options = {})
       @redis.attribute_write(key, value, options)
+    end
+
+    # Specify custom format when YAML encoding
+    def encode_with coder
+      coder.tag = '!live_resource:resource'
+      coder['class'] = @redis_class
+      coder['name'] = @redis_name
     end
 
     private
@@ -120,4 +135,9 @@ module LiveResource
       result
     end
   end
+end
+
+# Make YAML parser create ResourceProxy objects from our custom type.
+Psych.add_domain_type('live_resource', 'resource') do |type, val|
+  LiveResource::ResourceProxy.new(val['class'], val['name'])
 end

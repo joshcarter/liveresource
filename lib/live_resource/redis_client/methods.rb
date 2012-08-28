@@ -50,35 +50,31 @@ module LiveResource
       lrem methods_in_progress_list, 0, token
     end
 
-    def method_send(method, params, flags = {})
-      # Choose unique token for this action; retry if token is already in
-      # use by another action.
-      token = nil
-
-      loop do
-        token = sprintf("%05d", Kernel.rand(100000))
-        break if hsetnx(method_details(token), :method, method)
-      end
-
-      hset method_details(token), :params, serialize(params)
-      hset method_details(token), :flags, serialize(flags)
-      method_push token
-      token
-    end
-
     def method_get(token)
       method = hget method_details(token), :method
-      params = hget method_details(token), :params
-      flags = hget method_details(token), :flags
 
-      [method.to_sym, deserialize(params), deserialize(flags)]
+      deserialize(method)
     end
 
-    def method_result(token, result)
-      # Need to watch the method while setting the result; if the caller 
+    def method_send(method)
+      # Choose unique token for this action; retry if token is already in
+      # use by another action.
+      loop do
+        method.token = sprintf("%05d", Kernel.rand(100000))
+
+        break if hsetnx(method_details(method.token), :method, serialize(method))
+      end
+
+      method_push method.token
+      method
+    end
+
+    def method_result(method, result)
+      token = method.token
+
+      # Need to watch the method while setting the result; if the caller
       # has given up waiting before we set the result, we don't want to
       # leave extra crud in Redis.
-
       watch method_details(token)
 
       unless exists(method_details(token))
@@ -99,7 +95,8 @@ module LiveResource
       end
     end
 
-    def method_wait_for_result(token, timeout)
+    def method_wait_for_result(method, timeout)
+      token = method.token
       result = nil
 
       begin
@@ -125,8 +122,8 @@ module LiveResource
       del method_details(token)
     end
 
-    def method_done_with?(token)
-      token = token.to_s
+    def method_done_with?(method)
+      token = method.token.to_s
 
       # Need to do a multi/exec so we can atomically look in 3 lists
       # for the token

@@ -54,7 +54,7 @@ class MethodTest < Test::Unit::TestCase
   def setup
     Redis.new.flushall
 
-    LiveResource::register Server.new
+    Server.new
   end
 
   def teardown
@@ -119,7 +119,6 @@ class MethodTest < Test::Unit::TestCase
     assert_equal starting_keys, Redis.new.dbsize
   end
 
-
   def test_no_matching_method
     client = LiveResource::any(:server)
 
@@ -139,7 +138,6 @@ class MethodTest < Test::Unit::TestCase
     # Should have no junk left over in Redis
     assert_equal starting_keys, Redis.new.dbsize
   end
-
 
   def test_method_call_with_future
     starting_keys = Redis.new.dbsize

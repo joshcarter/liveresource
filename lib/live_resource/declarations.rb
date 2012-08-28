@@ -24,6 +24,20 @@ module LiveResource
     end
 
     module ClassMethods
+      def self.extended(base)
+        class << base
+          # Override the regular new routine with a custom new
+          # which auto-registers the resource.
+          alias :ruby_new :new
+
+          def new(*params)
+            obj = ruby_new(*params)
+            LiveResource::register obj
+            obj
+          end
+        end
+      end
+
       # FIXME: comment this
       def resource_name(attribute_name = nil)
         if attribute_name

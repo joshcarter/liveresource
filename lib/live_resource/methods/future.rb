@@ -2,15 +2,15 @@ module LiveResource
   # Returned from async method calls, in order to later get a method's
   # return value.
   class Future
-    def initialize(proxy, token)
+    def initialize(proxy, method)
       @proxy = proxy
-      @token = token
+      @method = method
       @value = nil
     end
 
     def value(timeout = 0)
       if @value.nil?
-        @value = @proxy.wait_for_done(@token, timeout)
+        @value = @proxy.wait_for_done(@method, timeout)
       end
 
       @value
@@ -18,7 +18,7 @@ module LiveResource
 
     def done?
       if @value.nil?
-        @proxy.done_with? @token
+        @proxy.done_with? @method
       else
         true
       end
