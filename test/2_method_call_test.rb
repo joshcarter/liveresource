@@ -54,7 +54,7 @@ class MethodTest < Test::Unit::TestCase
   def setup
     Redis.new.flushall
 
-    LiveResource::register Server.new
+    Server.new
   end
 
   def teardown

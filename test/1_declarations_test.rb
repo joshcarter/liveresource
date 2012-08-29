@@ -20,17 +20,6 @@ class TestClass < Test::Unit::TestCase
       self.accessor = ""
     end
 
-    class << self
-      alias :ruby_new :new
-    end
-
-    def self.new(name)
-      obj = ruby_new(name)
-      LiveResource::register obj
-
-      obj
-    end
-
     def self.class_method1(param1, param2)
       (param1 + param2).upcase
     end
