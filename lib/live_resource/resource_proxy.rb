@@ -88,6 +88,13 @@ module LiveResource
       @redis.attribute_write(key, value, options)
     end
 
+    # Specify custom format when YAML encoding
+    def encode_with coder
+      coder.tag = '!live_resource:resource'
+      coder['class'] = @redis_class
+      coder['name'] = @redis_name
+    end
+
     private
 
     # Merge the stack trace from the method sendor and method
@@ -120,4 +127,9 @@ module LiveResource
       result
     end
   end
+end
+
+# Make YAML parser create ResourceProxy objects from our custom type.
+Psych.add_domain_type('live_resource', 'resource') do |type, val|
+  LiveResource::ResourceProxy.new(val['class'], val['name'])
 end
