@@ -19,11 +19,11 @@ module LiveResource
     end
 
     def method_details(token)
-      "#{@redis_class}.#{@redis_name}.method.#{token}"
+      "#{token.redis_class}.#{token.redis_name}.method.#{token.seq}"
     end
 
     def result_details(token)
-      "#{@redis_class}.#{@redis_name}.result.#{token}"
+      "#{token.redis_class}.#{token.redis_name}.result.#{token.seq}"
     end
 
     def register_methods(methods)
@@ -39,30 +39,39 @@ module LiveResource
     end
 
     def method_wait
-      brpoplpush methods_list, methods_in_progress_list, 0
+      token = brpoplpush methods_list, methods_in_progress_list, 0
+      deserialize(token)
     end
 
     def method_push(token)
-      lpush methods_list, token
+      lpush methods_list, serialize(token)
     end
 
     def method_done(token)
-      lrem methods_in_progress_list, 0, token
+      lrem methods_in_progress_list, 0, serialize(token)
     end
 
     def method_get(token)
-      method = hget method_details(token), :method
+      method = get method_details(token)
 
       deserialize(method)
     end
 
     def method_send(method)
-      # Choose unique token for this action; retry if token is already in
-      # use by another action.
-      loop do
-        method.token = sprintf("%05d", Kernel.rand(100000))
+      unless method.token
+        # Choose unique token for this action; retry if token is already in
+        # use by another action.
+        loop do
+          method.token = RemoteMethodToken.new(
+                                           @redis_class,
+                                           @redis_name,
+                                           sprintf("%05d", Kernel.rand(100000)))
 
-        break if hsetnx(method_details(method.token), :method, serialize(method))
+          break if setnx(method_details(method.token), serialize(method))
+        end
+      else
+        # Re-serialize current state of method to existing location.
+        set method_details(method.token), serialize(method)
       end
 
       method_push method.token
@@ -123,20 +132,20 @@ module LiveResource
     end
 
     def method_done_with?(method)
-      token = method.token.to_s
+      st = serialize(method.token)
 
       # Need to do a multi/exec so we can atomically look in 3 lists
       # for the token
       multi
       lrange methods_list, 0, -1
       lrange methods_in_progress_list, 0, -1
-      lrange result_details(token), 0, -1
+      lrange result_details(method.token), 0, -1
       result = exec
 
       if (result[2] != [])
         # Result already pending
         true
-      elsif result[0].include?(token) or result[1].include?(token)
+      elsif result[0].include?(st) or result[1].include?(st)
         # Still in methods or methods-in-progress
         false
       else
@@ -147,13 +156,13 @@ module LiveResource
     private
 
     def method_cleanup(token)
-      token = token.to_s
+      st = serialize(token)
 
       # Need to do a multi/exec so we can atomically delete from all 3 lists
       multi
-      lrem methods_list, 0, token
-      lrem methods_in_progress_list, 0, token
-      lrem result_details(token), 0, token
+      lrem methods_list, 0, st
+      lrem methods_in_progress_list, 0, st
+      lrem result_details(token), 0, st
       exec
     end
 

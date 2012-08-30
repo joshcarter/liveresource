@@ -70,18 +70,36 @@ module LiveResource
           method = redis.method_get(token)
 
           begin
-            m = validate_method method
-
-            result = m.call(*method.params)
+            result = validate_method(method).call(*method.params)
 
             if result.is_a? Resource
               # Return descriptor of a resource proxy instead
               result = ResourceProxy.new(
                 result.redis.redis_class,
                 result.redis.redis_name)
+            elsif result.is_a? RemoteMethodForward
+              # Append forwarding instructions to current method
+              method.forward_to result
             end
 
-            redis.method_result method, result
+            if method.final_destination?
+              redis.method_result method, result
+            else
+              # Forward on to next step in method's path
+              dest = method.next_destination!
+
+              unless result.is_a? RemoteMethodForward
+                # First parameter(s) to next method will be the result
+                # of this method call.
+                if result.is_a? Array
+                  method.params = result + method.params
+                else
+                  method.params.unshift result
+                end
+              end
+
+              dest.remote_send method
+            end
           rescue Exception => e
             # TODO: custom encoding for exception to make it less
             # Ruby-specific.
@@ -108,7 +126,7 @@ module LiveResource
     # Verify validity of remote method being called
     def validate_method(m)
       unless @resource.remote_methods.include?(m.method)
-        raise NoMethodError.new("Undefined method `#{m.method}'")
+        raise NoMethodError.new("Undefined method `#{m.method}' (#{@resource.remote_methods.join(', ')})")
       end
 
       method = @resource.method(m.method)

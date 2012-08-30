@@ -18,8 +18,8 @@ class MethodRoutingTest < Test::Unit::TestCase
     resource_class :class_2
     resource_name :object_id
 
-    def method2(a)
-      a << 2
+    def method2(i)
+      [i, 2]
     end
   end
 
@@ -29,8 +29,8 @@ class MethodRoutingTest < Test::Unit::TestCase
     resource_class :class_3
     resource_name :object_id
 
-    def method3(a)
-      a << 3
+    def method3(i, j)
+      [i, j, 3]
     end
   end
 
@@ -51,9 +51,8 @@ class MethodRoutingTest < Test::Unit::TestCase
     c2 = LiveResource::any(:class_2)
     c3 = LiveResource::any(:class_3)
 
-    m << c1
-    m << c2
-    m << c3
+    m.add_destination(c2, :method2, [])
+    m.add_destination(c3, :method3, [])
 
     assert_equal [1, 2, 3], c1.wait_for_done(c1.remote_send(m))
   end
