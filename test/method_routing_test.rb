@@ -34,16 +34,27 @@ class MethodRoutingTest < Test::Unit::TestCase
     end
   end
 
-#   def test_create_method
-#     m = LiveResource::RemoteMethod.new(:method, [], {})
-#     c1 = LiveResource::any(:class_1)
-#     c2 = LiveResource::any(:class_2)
-#     c3 = LiveResource::any(:class_3)
+  def setup
+    Redis.new.flushall
+    Class1.new
+    Class2.new
+    Class3.new
+  end
 
-#     m << c1
-#     m << c2
-#     m << c3
+  def teardown
+    LiveResource::stop
+  end
 
-#     assert_equal [1, 2, 3], c.remote_send(m)
-#   end
+  def test_create_method
+    m = LiveResource::RemoteMethod.new(:method => :method1)
+    c1 = LiveResource::any(:class_1)
+    c2 = LiveResource::any(:class_2)
+    c3 = LiveResource::any(:class_3)
+
+    m << c1
+    m << c2
+    m << c3
+
+    assert_equal [1, 2, 3], c1.wait_for_done(c1.remote_send(m))
+  end
 end

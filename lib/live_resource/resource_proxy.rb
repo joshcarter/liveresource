@@ -19,27 +19,37 @@ module LiveResource
       @remote_attributes = @redis.registered_attributes
     end
 
-    def method_missing(method, *params, &block)
+    def method_missing(m, *params, &block)
       # Strip trailing ?, ! for seeing if we support method
-      stripped_method = method.to_s.sub(/[!,?,=]$/, '').to_sym
+      sm = m.to_s.sub(/[!,?]$/, '').to_sym
 
-      if @remote_attributes.include?(method)
+      if @remote_attributes.include?(m)
         # Attribute get/set
-        if method.match(/\=$/)
-          remote_attribute_write(stripped_method, params)
+        if m.match(/\=$/)
+          m = m.to_s.sub(/\=$/, '').to_sym # Strip trailing equal
+
+          remote_attribute_write(m, params)
         else
-          remote_attribute_read(method)
+          remote_attribute_read(m)
         end
-      elsif @remote_methods.include?(stripped_method)
-        if method.match(/!$/)
-          remote_send stripped_method, params, { :discard_result => true }
-        elsif method.match(/\?$/)
+      elsif @remote_methods.include?(sm)
+        method = RemoteMethod.new(
+                              :method => sm,
+                              :params => params,
+                              :path => [ self ])
+
+        if m.match(/!$/)
+          # Async call, discard result
+          method.flags[:discard_result] = true
+
+          remote_send method
+        elsif m.match(/\?$/)
           # Async call with future
-          m = remote_send stripped_method, params, {}
-          Future.new(self, m)
+          method = remote_send method
+          Future.new(self, method)
         else
           # Synchronous method call
-          wait_for_done remote_send(method, params, {})
+          wait_for_done remote_send(method)
         end
       else
         super
@@ -53,11 +63,8 @@ module LiveResource
         @remote_attributes.include?(method)
     end
 
-    def remote_send(method, params, flags)
-      @redis.method_send LiveResource::RemoteMethod.new(
-                                                    :method => method,
-                                                    :params => params,
-                                                    :flags => flags)
+    def remote_send(method)
+      @redis.method_send method
     end
 
     def wait_for_done(method, timeout = 0)
