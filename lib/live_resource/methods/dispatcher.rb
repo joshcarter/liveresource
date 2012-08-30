@@ -81,7 +81,12 @@ module LiveResource
                 result.redis.redis_name)
             end
 
-            redis.method_result method, result
+            if method.final_destination?
+              redis.method_result method, result
+            else
+              # Forward on to next step in method's path
+              method.next_destination.remote_send method
+            end
           rescue Exception => e
             # TODO: custom encoding for exception to make it less
             # Ruby-specific.
