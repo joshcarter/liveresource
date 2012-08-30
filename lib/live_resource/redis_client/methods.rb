@@ -69,6 +69,9 @@ module LiveResource
 
           break if setnx(method_details(method.token), serialize(method))
         end
+      else
+        # Re-serialize current state of method to existing location.
+        set method_details(method.token), serialize(method)
       end
 
       method_push method.token

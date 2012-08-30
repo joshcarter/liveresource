@@ -3,32 +3,48 @@ require_relative 'token'
 
 module LiveResource
   class RemoteMethod
-    attr_reader :method, :params, :flags, :path
+    attr_reader :flags, :path
     attr_accessor :token
 
     def initialize(params)
-      @method = params[:method]
-      @params = params[:params] || []
-      @flags = params[:flags] || {}
-      @path = params[:path] || []
+      @path = params[:path]
       @token = params[:token]
+      @flags = params[:flags] || {}
 
-      if @method.nil?
-        raise ArgumentError.new("RemoteMethod must have a method")
+      if @path.nil?
+        unless params[:method]
+          raise ArgumentError.new("RemoteMethod must have a method")
+        end
+
+        @path = []
+        @path << {
+          :method => params[:method],
+          :params => (params[:params] || []) }
       end
     end
 
-    def << (proxy)
-      @path << proxy
+    def method
+      @path[0][:method]
     end
 
-    def destination
-      @path.first
+    def params
+      @path[0][:params]
     end
 
-    def next_destination
+    def params=(new_params)
+      @path[0][:params] = new_params
+    end
+
+    def add_destination(proxy, method, params)
+      @path << {
+        :resource => proxy,
+        :method => method,
+        :params => params }
+    end
+
+    def next_destination!
       @path.shift
-      @path.first
+      @path[0][:resource]
     end
 
     def final_destination?
@@ -37,8 +53,6 @@ module LiveResource
 
     def encode_with coder
       coder.tag = '!live_resource:method'
-      coder['method'] = @method
-      coder['params'] = @params
       coder['flags'] = @flags
       coder['path'] = @path
       coder['token'] = @token if @token

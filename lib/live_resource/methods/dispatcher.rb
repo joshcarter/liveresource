@@ -70,6 +70,8 @@ module LiveResource
           method = redis.method_get(token)
 
           begin
+            puts "method: #{method.to_yaml}"
+
             m = validate_method method
 
             result = m.call(*method.params)
@@ -85,7 +87,17 @@ module LiveResource
               redis.method_result method, result
             else
               # Forward on to next step in method's path
-              method.next_destination.remote_send method
+              dest = method.next_destination!
+
+              # First parameter(s) to next method will be the result
+              # of this method call.
+              if result.is_a? Array
+                method.params = result + method.params
+              else
+                method.params.unshift result
+              end
+
+              dest.remote_send method
             end
           rescue Exception => e
             # TODO: custom encoding for exception to make it less
@@ -113,7 +125,7 @@ module LiveResource
     # Verify validity of remote method being called
     def validate_method(m)
       unless @resource.remote_methods.include?(m.method)
-        raise NoMethodError.new("Undefined method `#{m.method}'")
+        raise NoMethodError.new("Undefined method `#{m.method}' (#{@resource.remote_methods.join(', ')})")
       end
 
       method = @resource.method(m.method)
