@@ -67,31 +67,31 @@ module LiveResource
             break
           end
 
-          method, params, flags = redis.method_get(token)
-
-          # puts "method: #{method.inspect}"
-          # puts "params: #{params.inspect}"
-          # puts "flags: #{flags.inspect}"
+          method = redis.method_get(token)
 
           begin
-            method = validate_method(method, params)
-            result = method.call(*params)
+            m = validate_method method
+
+            result = m.call(*method.params)
 
             if result.is_a? Resource
               # Return descriptor of a resource proxy instead
-              result = { :class => 'ResourceProxy',
-                :redis_class => result.dispatcher.redis.redis_class,
-                :redis_name => result.dispatcher.redis.redis_name }
+              result = ResourceProxy.new(
+                result.redis.redis_class,
+                result.redis.redis_name)
             end
 
-            redis.method_result token, result
+            redis.method_result method, result
           rescue Exception => e
-            debug "Method #{token} failed:", e.message
-            redis.method_result token, e
+            # TODO: custom encoding for exception to make it less
+            # Ruby-specific.
+
+            debug "Method #{method.token} failed:", e.message
+            redis.method_result method, e
           end
 
           redis.method_done token
-          redis.method_discard_result(token) if flags[:discard_result]
+          redis.method_discard_result(token) if method.flags[:discard_result]
         end
       ensure
         # NOTE: if this process crashes outright, or we lose network
@@ -106,23 +106,23 @@ module LiveResource
     private
 
     # Verify validity of remote method being called
-    def validate_method(method_sym, params)
-      unless @resource.remote_methods.include?(method_sym)
-        raise NoMethodError.new("Undefined method `#{method_sym}'")
+    def validate_method(m)
+      unless @resource.remote_methods.include?(m.method)
+        raise NoMethodError.new("Undefined method `#{m.method}'")
       end
 
-      method = @resource.method(method_sym)
+      method = @resource.method(m.method)
 
-      if (method.arity != 0 && params.nil?)
-        raise ArgumentError.new("wrong number of arguments to `#{method_sym}'" \
+      if (method.arity != 0 && m.params.nil?)
+        raise ArgumentError.new("wrong number of arguments to `#{m.method}'" \
                       "(0 for #{method.arity})")
       end
 
-      if (method.arity > 0 and method.arity != params.length) or
-          (method.arity < 0 and method.arity.abs != params.length and
-          (method.arity.abs - 1) != params.length)
-        raise ArgumentError.new("wrong number of arguments to `#{method_sym}'" \
-                      "(#{params.length} for #{method.arity})")
+      if (method.arity > 0 and method.arity != m.params.length) or
+          (method.arity < 0 and method.arity.abs != m.params.length and
+          (method.arity.abs - 1) != m.params.length)
+        raise ArgumentError.new("wrong number of arguments to `#{m.method}'" \
+                      "(#{m.params.length} for #{method.arity})")
       end
 
       method

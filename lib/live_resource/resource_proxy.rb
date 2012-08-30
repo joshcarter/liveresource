@@ -1,6 +1,7 @@
 require_relative 'log_helper'
 require_relative 'redis_client'
-require_relative 'future'
+require_relative 'methods/method'
+require_relative 'methods/future'
 
 module LiveResource
   # Returned from LiveResource finder methods (all, find, etc), acts as a
@@ -34,8 +35,8 @@ module LiveResource
           remote_send stripped_method, params, { :discard_result => true }
         elsif method.match(/\?$/)
           # Async call with future
-          token = remote_send stripped_method, params, {}
-          Future.new(self, token)
+          m = remote_send stripped_method, params, {}
+          Future.new(self, m)
         else
           # Synchronous method call
           wait_for_done remote_send(method, params, {})
@@ -53,11 +54,14 @@ module LiveResource
     end
 
     def remote_send(method, params, flags)
-      @redis.method_send(method, params, flags)
+      @redis.method_send LiveResource::RemoteMethod.new(
+                                                    :method => method,
+                                                    :params => params,
+                                                    :flags => flags)
     end
 
-    def wait_for_done(token, timeout = 0)
-      result = @redis.method_wait_for_result(token, timeout)
+    def wait_for_done(method, timeout = 0)
+      result = @redis.method_wait_for_result(method, timeout)
 
       if result.is_a?(Exception)
         # Merge the backtrace from the passed exception with this
@@ -68,16 +72,13 @@ module LiveResource
 
         result.set_backtrace result.backtrace
         raise result
-      elsif result.is_a?(Hash) && result[:class] == 'ResourceProxy'
-        # Convert to resource proxy
-        ResourceProxy.new(result[:redis_class], result[:redis_name])
       else
         result
       end
     end
 
-    def done_with?(token)
-      @redis.method_done_with? token
+    def done_with?(method)
+      @redis.method_done_with? method
     end
 
     def remote_attribute_read(key, options = {})
