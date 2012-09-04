@@ -17,7 +17,7 @@ class TestClass < Test::Unit::TestCase
       remote_attribute_write(:name, name)
 
       self.write_only = 'not yet written'
-      self.accessor = ""
+      self.accessor = nil
     end
 
     def self.class_method1(param1, param2)
@@ -111,7 +111,7 @@ class TestClass < Test::Unit::TestCase
     bob = class_resource.new("bob")
 
     assert_equal "bob", bob.name
-    assert_equal "", bob.accessor
+    assert_equal nil, bob.accessor
 
     bob.accessor = "new value"
     assert_equal "new value", bob.accessor

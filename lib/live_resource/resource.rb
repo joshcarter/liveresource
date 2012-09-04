@@ -18,6 +18,8 @@ module LiveResource
     include LiveResource::Attributes
     include LiveResource::Methods
 
+    # Extends resource classes with proper class methods and
+    # class-level method dispatcher.
     def self.included(base)
       base.extend(LiveResource::Declarations::ClassMethods)
 

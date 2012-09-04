@@ -1,9 +1,23 @@
 LiveResource 2
 ==============
 
-TODO:
+TODO for LR 2.0:
 
 - Documentation!!
+- More formally specify and test edge-case behaviors, for example:
+
+  * Getting/setting attributes that don't exist.
+
+  * Forward/continue with methods that fail, methods that time out
+    because no resource is available.
+
+  * Startup order problems with resources and clients of them. Any way
+    allow clients to wait and retry?
+
+  * Serialize exceptions in a less Ruby-specific manner.
+
+  * Merge exception backtrace properly. (ResourceProxy#wait_for_done)
+
 - Benchmarking: try multiple redis clients
 
 

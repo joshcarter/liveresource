@@ -4,13 +4,18 @@ require_relative 'methods/method'
 require_relative 'methods/future'
 
 module LiveResource
-  # Returned from LiveResource finder methods (all, find, etc), acts as a
-  # proxy to a remote resource.
+
+  # Client object that represents a resource, allowing method calls
+  # and getting/setting attributes. Typically these are returned from
+  # LiveResource finder methods (all, find, etc).
   class ResourceProxy
     include LiveResource::LogHelper
 
     attr_reader :redis_class, :redis_name
 
+    # Create a new proxy given its Redis class and name; typically NOT
+    # USED by client code -- use methods of LiveResource::Finders
+    # instead.
     def initialize(redis_class, redis_name)
       @redis_class = redis_class
       @redis_name = redis_name
@@ -19,6 +24,7 @@ module LiveResource
       @remote_attributes = @redis.registered_attributes
     end
 
+    # Proxies attribute and remote method calls to the back-end provider.
     def method_missing(m, *params, &block)
       # Strip trailing ?, ! for seeing if we support method
       sm = m.to_s.sub(/[!,?]$/, '').to_sym
@@ -28,11 +34,12 @@ module LiveResource
         if m.match(/\=$/)
           m = m.to_s.sub(/\=$/, '').to_sym # Strip trailing equal
 
-          remote_attribute_write(m, params)
+          remote_attribute_write(m, *params)
         else
           remote_attribute_read(m)
         end
       elsif @remote_methods.include?(sm)
+        # Method call
         method = RemoteMethod.new(
                               :method => sm,
                               :params => params)
@@ -55,6 +62,10 @@ module LiveResource
       end
     end
 
+    # Checks if method is a supported attribute or remote method.
+    #
+    # @param [LiveResource::RemoteMethod] method method to send
+    # @param [Object] include_private unused
     def respond_to_missing?(method, include_private)
       stripped_method = method.to_s.sub(/[!,?]$/, '').to_sym
 
@@ -62,10 +73,21 @@ module LiveResource
         @remote_attributes.include?(method)
     end
 
+    # Send a already-created method object; not typically used by
+    # clients -- use method_missing interface instead.
+    #
+    # @param [LiveResource::RemoteMethod] method method to send
     def remote_send(method)
       @redis.method_send method
     end
 
+    # Wait for method to finish, blocks if method not complete. An
+    # exception raised by the remote resource will be captured and
+    # raised in the client's thread. Clients may only wait once for
+    # completion.
+    #
+    # @param [LiveResource::RemoteMethod] method method to wait for
+    # @param [Numeric] timeout seconds to wait for method completion
     def wait_for_done(method, timeout = 0)
       result = @redis.method_wait_for_result(method, timeout)
 
@@ -83,14 +105,26 @@ module LiveResource
       end
     end
 
+    # Check if remote method is already complete. May be called multiple times.
+    #
+    # @param [LiveResource::RemoteMethod] method method to check on
     def done_with?(method)
       @redis.method_done_with? method
     end
 
+    # Reads remote attribute.
+    #
+    # @param [Symbol] key attribute name
+    # @return [Object] remote attribute value
     def remote_attribute_read(key, options = {})
       @redis.attribute_read(key, options)
     end
 
+    # Writes remote attribute to new value.
+    #
+    # @param [Symbol] key attribute name
+    # @param [Object] value new value for attribute
+    # @return new value for attribute
     def remote_attribute_write(key, value, options = {})
       @redis.attribute_write(key, value, options)
     end

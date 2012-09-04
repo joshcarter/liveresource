@@ -21,11 +21,11 @@ module LiveResource
     end
 
     def attribute_read(key, options)
-      get "#{@redis_class}.#{@redis_name}.attributes.#{key}"
+      deserialize(get("#{@redis_class}.#{@redis_name}.attributes.#{key}"))
     end
 
     def attribute_write(key, value, options)
-      set "#{@redis_class}.#{@redis_name}.attributes.#{key}", value
+      set("#{@redis_class}.#{@redis_name}.attributes.#{key}", serialize(value))
     end
   end
 end
