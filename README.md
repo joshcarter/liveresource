@@ -3,7 +3,7 @@ LiveResource 2
 
 TODO:
 
-- Forward/continue methods
+- Documentation!!
 - Benchmarking: try multiple redis clients
 
 
