@@ -35,8 +35,7 @@ module LiveResource
       elsif @remote_methods.include?(sm)
         method = RemoteMethod.new(
                               :method => sm,
-                              :params => params,
-                              :path => [ self ])
+                              :params => params)
 
         if m.match(/!$/)
           # Async call, discard result
@@ -94,6 +93,10 @@ module LiveResource
 
     def remote_attribute_write(key, value, options = {})
       @redis.attribute_write(key, value, options)
+    end
+
+    def inspect
+      "#{self.class}: #{@redis_class} #{@redis_name}"
     end
 
     # Specify custom format when YAML encoding

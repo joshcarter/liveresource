@@ -12,7 +12,7 @@ class ForwardContinueTest < Test::Unit::TestCase
       c3 = LiveResource::any(:class_3)
       param3 = "baz"
 
-      forward(c2, :method2, param1, param2, param3).continue(c3, :method3)
+      LiveResource::forward(c2, :method2, param1, param2, param3).continue(c3, :method3)
     end
   end
 
@@ -66,12 +66,13 @@ class ForwardContinueTest < Test::Unit::TestCase
   def test_instance_does_not_respond_to_invalid_methods
     i = LiveResource::all(:class_1).first
 
-    assert !i.respond_to?(:method2), "instance should not respond to method23"
-    assert !i.respond_to?(:method2!), "instance should not respond to method23!"
-    assert !i.respond_to?(:method2?), "instance should not respond to method23?"
+    assert !i.respond_to?(:method2), "instance should not respond to method2"
+    assert !i.respond_to?(:method2!), "instance should not respond to method2!"
+    assert !i.respond_to?(:method2?), "instance should not respond to method2?"
   end
 
   def test_message_path
+    # LiveResource::RedisClient::logger.level = Logger::DEBUG
     assert_equal "FOO-BAR-BAZ", LiveResource::any(:class_1).method1("foo", "bar")
   end
 end

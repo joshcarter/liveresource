@@ -1,5 +1,6 @@
 require 'yaml'
 require_relative 'token'
+require_relative 'forward'
 
 module LiveResource
   class RemoteMethod
@@ -40,6 +41,21 @@ module LiveResource
         :resource => proxy,
         :method => method,
         :params => params }
+
+      self
+    end
+
+    def forward_to(forward)
+      while forward
+        @path << {
+          :resource => forward.resource,
+          :method => forward.method,
+          :params => forward.params }
+
+        forward = forward.next
+      end
+
+      self
     end
 
     def next_destination!
@@ -49,6 +65,14 @@ module LiveResource
 
     def final_destination?
       @path.length == 1
+    end
+
+    def inspect
+      if @path.length == 1
+        "#{self.class}: #{@path[0][:method]} (#{@path[0][:params].length} params)"
+      else
+        "#{self.class}: #{@path.length} path elements"
+      end
     end
 
     def encode_with coder

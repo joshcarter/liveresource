@@ -70,17 +70,16 @@ module LiveResource
           method = redis.method_get(token)
 
           begin
-            puts "method: #{method.to_yaml}"
-
-            m = validate_method method
-
-            result = m.call(*method.params)
+            result = validate_method(method).call(*method.params)
 
             if result.is_a? Resource
               # Return descriptor of a resource proxy instead
               result = ResourceProxy.new(
                 result.redis.redis_class,
                 result.redis.redis_name)
+            elsif result.is_a? RemoteMethodForward
+              # Append forwarding instructions to current method
+              method.forward_to result
             end
 
             if method.final_destination?
@@ -89,12 +88,14 @@ module LiveResource
               # Forward on to next step in method's path
               dest = method.next_destination!
 
-              # First parameter(s) to next method will be the result
-              # of this method call.
-              if result.is_a? Array
-                method.params = result + method.params
-              else
-                method.params.unshift result
+              unless result.is_a? RemoteMethodForward
+                # First parameter(s) to next method will be the result
+                # of this method call.
+                if result.is_a? Array
+                  method.params = result + method.params
+                else
+                  method.params.unshift result
+                end
               end
 
               dest.remote_send method
