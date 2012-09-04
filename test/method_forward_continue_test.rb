@@ -12,7 +12,7 @@ class ForwardContinueTest < Test::Unit::TestCase
       c3 = LiveResource::any(:class_3)
       param3 = "baz"
 
-      LiveResource::forward(c2, :method2, param1, param2, param3).continue(c3, :method3)
+      forward(c2, :method2, param1, param2, param3).continue(c3, :method3)
     end
   end
 
@@ -72,7 +72,12 @@ class ForwardContinueTest < Test::Unit::TestCase
   end
 
   def test_message_path
+    starting_keys = Redis.new.dbsize
+
     # LiveResource::RedisClient::logger.level = Logger::DEBUG
     assert_equal "FOO-BAR-BAZ", LiveResource::any(:class_1).method1("foo", "bar")
+
+    # Should have no junk left over in Redis
+    assert_equal starting_keys, Redis.new.dbsize
   end
 end

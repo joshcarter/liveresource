@@ -125,20 +125,29 @@ module LiveResource
 
     # Verify validity of remote method being called
     def validate_method(m)
+
+      # Check that method is remote callable
       unless @resource.remote_methods.include?(m.method)
         raise NoMethodError.new("Undefined method `#{m.method}' (#{@resource.remote_methods.join(', ')})")
       end
 
       method = @resource.method(m.method)
 
+      # Check for nil params when method is expecting 1 or more arguments
       if (method.arity != 0 && m.params.nil?)
         raise ArgumentError.new("wrong number of arguments to `#{m.method}'" \
                       "(0 for #{method.arity})")
       end
 
-      if (method.arity > 0 and method.arity != m.params.length) or
-          (method.arity < 0 and method.arity.abs != m.params.length and
-          (method.arity.abs - 1) != m.params.length)
+      # If the arity is >= 0, then the number of params should be the same as the
+      # arity.
+      #
+      # For variable argument methods, the arity is -n-1 where n is the number of
+      # required arguments. This means if the arity is < -1, there must be at least
+      # (artiy.abs - 1) arguments (NOTE: if there are no required arguments, there's
+      # nothing to check).
+      if (method.arity >= 0 and method.arity != m.params.length) or
+          (method.arity < -1 and (method.arity.abs - 1) > m.params.length)
         raise ArgumentError.new("wrong number of arguments to `#{m.method}'" \
                       "(#{m.params.length} for #{method.arity})")
       end

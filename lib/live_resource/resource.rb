@@ -3,6 +3,7 @@ require_relative 'declarations'
 require_relative 'finders'
 require_relative 'attributes'
 require_relative 'methods'
+require_relative 'methods/forward'
 
 module LiveResource
 
@@ -17,6 +18,8 @@ module LiveResource
     include LiveResource::Attributes
     include LiveResource::Methods
 
+    # Extends resource classes with proper class methods and
+    # class-level method dispatcher.
     def self.included(base)
       base.extend(LiveResource::Declarations::ClassMethods)
 
@@ -24,6 +27,18 @@ module LiveResource
       # (i.e, the method dispatcher).
       base.extend(LiveResource::Attributes)
       base.extend(LiveResource::Methods)
+    end
+
+    # Create forward instruction that can be returned by a remote
+    # method, instructing LiveResource to forward to a different
+    # remote method instead of returing directly to the caller.
+    #
+    # @param [LiveResource::ResourceProxy] resource the resource to forward to
+    # @param [Symbol] method the resource's method to call
+    # @param params any parameters to pass with the method call
+    # @return [LiveResource::RemoteMethodForward] a forward instruction, used internally by LiveResource
+    def forward(resource, method, *params)
+      LiveResource::RemoteMethodForward.new(resource, method, params)
     end
   end
 end
