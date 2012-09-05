@@ -63,7 +63,7 @@ class ParamsTest < Test::Unit::TestCase
     assert_raise(ArgumentError) { @test_instance.fixed_params_method(6, 7, 8) }
   end
 
-  def test_splat_params
+  def test_splat_params_method
     assert_equal 0, @test_instance.splat_params_method
     assert_equal 1, @test_instance.splat_params_method("foo")
     assert_equal 2, @test_instance.splat_params_method("foo", "bar")
