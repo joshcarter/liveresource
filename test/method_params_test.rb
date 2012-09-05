@@ -5,16 +5,18 @@ class ParamsTest < Test::Unit::TestCase
     include LiveResource::Resource
 
     remote_reader :name
+    remote_reader :age
 
     resource_name :name
     resource_class :params_class
 
-    def initialize(name)
+    def initialize(name, age)
       remote_attribute_write(:name, name)
+      remote_attribute_write(:age, age)
     end
 
     def no_params_method
-      true
+      self.age
     end
 
     def fixed_params_method(arg1, arg2)
@@ -43,7 +45,7 @@ class ParamsTest < Test::Unit::TestCase
     LiveResource::register ParamsClass
 
     @test_class = LiveResource::find(:params_class)
-    @test_instance = @test_class.new("bob")
+    @test_instance = @test_class.new("bob", 42)
   end
 
   def teardown
@@ -51,7 +53,7 @@ class ParamsTest < Test::Unit::TestCase
   end
 
   def test_no_params_method
-    assert_equal true, @test_instance.no_params_method
+    assert_equal 42, @test_instance.no_params_method
     assert_raise(ArgumentError) { @test_instance.no_params_method("foo") }
   end
 
