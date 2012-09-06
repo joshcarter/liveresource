@@ -1,4 +1,5 @@
 require_relative 'live_resource/resource'
+require 'set'
 
 # LiveResource is a framework for coordinating processes and status
 # within a distributed system. Consult the documention for
@@ -14,7 +15,7 @@ module LiveResource
   def self.register(resource)
     # puts "registering #{resource.to_s}"
 
-    @@resources ||= []
+    @@resources ||= Set.new
     @@resources << resource
 
     resource.start
@@ -48,5 +49,17 @@ module LiveResource
     @@resources.each do |resource|
       resource.stop
     end
+  end
+
+  def self.run
+    # Stop all currently running resources and exit the
+    # process when SIGINT is received
+    Signal.trap("INT") do
+      self.stop
+      exit
+    end
+
+    # Put the main thread to sleep
+    sleep
   end
 end

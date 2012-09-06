@@ -6,7 +6,6 @@ module LiveResource
     include LogHelper
 
     attr_reader :thread, :resource
-    EXIT_TOKEN = 'exit'
 
     def initialize(resource)
       @resource = resource
@@ -29,7 +28,7 @@ module LiveResource
     def stop
       return if @thread.nil?
 
-      redis.method_push EXIT_TOKEN
+      redis.method_push exit_token
       @running = false
       @thread.join
       @thread = nil
@@ -62,9 +61,14 @@ module LiveResource
         loop do
           token = redis.method_wait
 
-          if token == EXIT_TOKEN
-            redis.method_done token
-            break
+          if is_exit_token(token)
+            if token == exit_token
+              redis.method_done token
+              break
+            else
+              redis.method_push token
+              next
+            end
           end
 
           method = redis.method_get(token)
@@ -118,6 +122,7 @@ module LiveResource
         redis.unregister
 
         info("#{self} method dispatcher exiting")
+
       end
     end
 
@@ -153,6 +158,19 @@ module LiveResource
       end
 
       method
+    end
+
+    EXIT_PREFIX = 'exit'
+
+    def exit_token
+      # Construct an exit token for this resource
+      "#{EXIT_PREFIX}.#{Socket.gethostname}.#{Process.pid}.#{@thread.object_id}"
+    end
+
+    def is_exit_token(token)
+      # Exit tokens are strings which can be search with a regular expresion.
+      return false unless token.respond_to? :match
+      token.match /^#{EXIT_PREFIX}/
     end
   end
 end
