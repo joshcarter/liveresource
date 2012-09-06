@@ -51,15 +51,16 @@ module LiveResource
     end
   end
 
-  def self.run
-    # Stop all currently running resources and exit the
-    # process when SIGINT is received
-    Signal.trap("INT") do
+  # Run LiveResource until the exit_signal (default=SIGINT) is recevied.
+  # Optionally invoke the exit callback before exiting.
+  def self.run(exit_signal="INT", &exit_cb)
+    Signal.trap(exit_signal) do
       self.stop
+      yield if exit_cb
       exit
     end
 
-    # Put the main thread to sleep
+    # Put this thread to sleep
     sleep
   end
 end
