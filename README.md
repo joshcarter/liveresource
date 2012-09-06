@@ -1,54 +1,50 @@
 LiveResource 2
 ==============
 
-TODO for LR 2.0:
+LiveResource is a framework for coordinating processes, statuses, and
+messaging within a distributed system. It provides the following
+abilities:
 
-- Documentation!!
-- More formally specify and test edge-case behaviors, for example:
+* Call methods on objects in other threads and processes, locally or
+  on remote machines. Synchronous and asynchronous calling supported,
+  arguments and return values are serialized, exceptions are also
+  propagated back to the caller.
 
-  * Getting/setting attributes that don't exist.
-
-  * Forward/continue with methods that fail, methods that time out
-    because no resource is available.
-
-  * Startup order problems with resources and clients of them. Any way
-    allow clients to wait and retry?
-
-  * Serialize exceptions in a less Ruby-specific manner.
-
-  * Merge exception backtrace properly. (ResourceProxy#wait_for_done)
-
-- Benchmarking: try multiple redis clients
-
-
-
-
-(old stuff below)
-
-
-LiveResource is a framework for coordinating processes and status within a distributed system. It provides the following abilities:
-
-* Call methods on objects in other threads and processes. Synchronous and asynchronous calling supported, arguments and return values are serialized properly (YAML by default), exceptions are also propagated back to the caller.
-
-* Set attributes that other threads and processes can use.
-
-* Subscribe to attribute updates; receive callback when new value is set.
+* Set attributes that other threads and processes can see.
 
 These support a variety of use models, for example:
 
-* Web application (Rails, Sinatra, etc.) which needs to gather state from multiple places and render it on a web page. The app should never block for long in its render path, so it either needs state *right now* or it needs to render something about the state not being available. Since daemons that know that state may be busy (blocked on IO, for example), they really need to *push* the state into LiveResource when they can, and let the GUI pull it when needed.
+* Web application (Rails, Sinatra, etc.) which needs to gather state
+  from multiple places and render it on a web page. The app should
+  never block for long in its render path, so it needs to pull the
+  state *right now*. Daemons that know the state may be busy (blocked
+  on IO, for example), so they should *push* state into LiveResource
+  when they can, and let the GUI pull it when needed.
 
-* Process needs to efficiently monitor the state of another daemon. The monitoring process should stay blocked until something interesting comes up -- in this case, when a remote attribute changes value. For example, a process that pings network routers notices that a router isn't responding, so it updates a list (remote attribute) of online routers. An email notifier process is subscribed to that attribute, wakes up, and notices that the router list is one router light. It then generates an email to an unhappy system administrator.
+* Processes that need to call into another process to do a job. Any
+  process can search the list of resources by resource class, either
+  looking for a specific instance by name, grabbing any, or iterating
+  over all of them. It can call methods synchronously, looking just
+  like a Ruby method call, or async and check for the result later.
 
-* Processes that need to call into another process to do a job. In our router example above, the system administrator fixes the router and wants it monitored again. The sysad uses a web app to re-instate the router, and the web app calls an remote method (asynchronously) on the ping process to update its list.
+LiveResource is built for Ruby and is designed to be familiar to Ruby
+programmers. It uses terms which are as Ruby-esque as possible instead
+of borrowing from other domains (pub/sub, RMI, and so forth).
 
-LiveResource is built for Ruby and is designed to be familiar to Ruby programmers. It uses terms which are as Ruby-esque as possible instead of borrowing from other domains (pub/sub, RMI, and so forth).
+The underlying tools, however, are available to any language: Redis is
+the hub for communications, and all objects are stored with YAML
+encoding. Ports to other languages would be straightforward (and may
+be forthcoming).
 
-The underlying tools, however, are available to any language: Redis is the hub for communications, and all objects are stored with YAML encoding. Ports to other languages would be straightforward (and may be forthcoming).
+**NOTE: LiveResource 2 introduces significant improvements in its API,
+but breaks compatibility with versions 1.x. The older API is
+maintained on the `stable-1` branch.**
 
 ## Requirements
 
 LiveResource requires:
+
+* Ruby 1.9.3 or JRuby in 1.9 mode (`export JRUBY_OPTS=--1.9`).
 
 * [Redis 2.2+.](http://redis.io/) server. (Redis 1.x does not support commands needed by LiveResource.)
 
@@ -56,121 +52,70 @@ LiveResource requires:
 
 ## Attributes
 
-Here's a simple attribute publisher:
+Here's a resource with an attribute:
 
-    class FavoriteColorPublisher
-      include LiveResource::Attribute
+    class FavoriteColor
+      include LiveResource::Resource
 
+			# Set up resource class and instance naming			
+			resource_class :favorite_color
+			resource_name :object_id
+
+			# Declare remote attributes
       remote_writer :favorite
     end
     
-    publisher = FavoriteColorPublisher.new
-    publisher.namespace = "color"
-    publisher.favorite = "blue"
+    resource = FavoriteColor.new
+    resource.favorite = "blue"
 
-The publisher demonstrates several points:
+This resource demonstrates several points:
 
-* LiveResource features are defined in modules -- you include what you need for your use. This publisher only uses `Attribute`. Other modules are `Subscriber`, `MethodProvider`, and `MethodSender`.
+* LiveResource features are defined in the Resource modules -- you can
+  add LiveResource features to existing classes with little effort.
 
-* "Remote" Attributes are defined much like Ruby's attributes: `remote_reader`, `remote_writer`, and `remote_accessor` are used to automatically create methods for reading and writing a given attribute.
+* "Remote" Attributes are defined much like Ruby's attributes:
+  `remote_reader`, `remote_writer`, and `remote_accessor` are used to
+  automatically create methods for reading and writing a given
+  attribute.
 
-* LiveResource attributes have a namespace, which is simply a string to identify the resource. If multiple attribute writers use the same namespace (even if they are in separate processes) an assignment to one will overwrite the others.
+* LiveResource instances have both a class and a name, making your
+  remote interface look just like a normal Ruby object API. (When you
+  don't care about naming, tell LiveResource to assign names based on
+  `:object_id`.)
 
-Let's create a class which can access the above-published favorite color:
+* By default, LiveResource connects to a Redis server at
+  `localhost:6379`, but you can change any Redis client parameters you
+  need to.
 
-    class FavoriteColor
-      include LiveResource::Attribute
+Now let's access the above-published favorite color:
 
-      remote_reader :favorite
-    end
+    r = LiveResource::any(:favorite_color)
+		r.favorite # --> "blue"
 
-    reader = FavoriteColor.new
-    reader.namespace = "color"
-    reader.favorite # --> "blue"
+LiveResource includes the finders `find`, `any`, and `all`. The object
+returned is a *proxy* for the real resource, which could be in a
+different process or on a whole different machine.
 
-Not real fancy, but consider that this object could be running in a separate process. Further, let's explicitly assign a Redis client instance to both objects:
-
-    # On machine A
-    publisher.redis = Redis.new(:hostname => 'machine-c.local')
-    
-    # On machine B
-    reader.redis = Redis.new(:hostname => 'machine-c.local')
-    
-Now this code can run on separate machines.
-
-Note that attributes can be set to any Ruby objects; they are automatically marshaled using YAML. (If you want to create a LiveResource-like interface in another programming language, you just need a Redis client and YAML.)
-
-## Attribute Read-Modify-Write
-
-Reading an attribute is an atomic operation; so is writing one. However, sometimes you need to read, modify, and write an attribute as an atomic operation. LiveResource provides a special notation for that:
-
-    class FavoriteColorPublisher
-      include LiveResource::Attribute
-
-      remote_accessor :favorite
-
-      # Update favorite color to anything except the currently-published
-      # favorite.
-      def update_favorite
-        colors = ['red', 'blue', 'green']
-
-        remote_modify(:favorite) do |current_favorite|
-          colors.delete(current_favorite)
-
-          # Value of block will become the new value of the attribute.
-          colors.shuffle.first
-        end
-      end
-    end
-
-The method `remote_modify` takes the attribute to modify (as as symbol) and a block. The block is provided the current value of the attribute; the ending value of the block becomes the new attribute value.
-
-Rather than perform locking on an attribute (which would slow down *all* reads and writes), LiveResource performs *optimistic locking* thanks to features in Redis. If the value of the attribute changes while the `remote_modify` block is executing, LiveResource simply replays the block with the changed value. This preserves the performance of attribute read/write and eliminates potential deadlocks.
-
-As a consequence, however, the **block passed to `remote_modify` should not change external state that relies on the block only executing once.**
-
-## Attribute Subscribers
-
-Attribute get/set is useful for publishing state in one place, then reading it in another. However, in some cases you want on object that monitors a state and performs an action when it changes. An example:
-
-    class FavoriteColorSubscriber
-      include LiveResource::Subscriber
-
-      remote_subscription :favorite
-
-      def favorite(new_favorite)
-        puts "Publisher changed its favorite to #{new_favorite}"
-      end
-    end
-
-    subscriber = FavoriteColorSubscriber.new
-    subscriber.namespace = "color"
-    subscriber.subscribe # Spawns thread
-
-    # Publisher object from the "Attribute" section above.
-    publisher.favorite = "red"
-    # --> callback prints: "Publisher changed their favorite to red"
-    publisher.favorite = "green"
-    # --> callback prints: "Publisher changed their favorite to green"
-
-    subscriber.unsubscribe # Stops and joins callback thread
-
-While the subscription thread is running, the `favorite` method in this subscriber will called any time a new favorite color is published. If desired, you can explicitly set a different callback method name:
-
-    remote_subscription :favorite, :my_callback_method
-
-Callbacks take one parameter, the newly-published value.
-
-Note that the callback thread stays blocked when it's not executing a callback; it does not spin and poll Redis.
+Note that attributes can be set to any Ruby objects; they are
+automatically marshaled using YAML. (If you want to create a
+LiveResource interface in another programming language, you just need
+a Redis client and YAML.)
 
 ## Methods
 
-Finally, LiveResource allows method calling from one object to another. Like attributes, it works great across processes and machines. An example:
+Attributes are good for publishing state information, but how do you
+*interact* with a resource? LiveResource provides actor-like method
+calling from one object to another. Like attributes, it works great
+across processes and machines. An example:
 
-    class Server
-      include LiveResource::MethodProvider
+		#
+		# Running in process A
+    #
+    class MathResource
+      include LiveResource::Resource
 
-      remote_method :divide
+			remote_class :math
+			remote_name :object_id
 
       def divide(dividend, divisor)
         raise ArgumentError.new("cannot divide by zero") if divisor == 0
@@ -179,93 +124,122 @@ Finally, LiveResource allows method calling from one object to another. Like att
       end
     end
 
-    class Client
-      include LiveResource::MethodSender
-  
-      def fancy_process(a, b)
-        begin
-          puts remote_send :divide, a, b
-        rescue ArgumentError => e
-          puts "oops, I messed up: #{e}"
-        end
-      end
-    end
+		# Creating an instances starts its method dispatcher thread.
+		MathResource.new
+		sleep
 
-    s = Server.new
-    s.namespace = "math"
-    s.start_method_dispatcher
+		# 
+    # Running in processs B
+		#
+		m = LiveResource::any(:math)
+    m.divide(10, 5) # --> 2
+		m.divide(1, 0)  # --> raises ArgumentError
 
-    c = Client.new
-    c.namespace = "math"
-    c.fancy_process(10, 5)
-    c.fancy_process(1, 0)
+The resource does not need to explicitly declare its remote methods;
+any public methods are automatically remote-callable. (Methods of
+superclasses, however, are not remoted.) When an instance is created,
+a thread is also created to service remote method calls.
 
-    s.stop_method_dispatcher
+When you get a resource proxy (as in process B above) there are a
+couple ways to call a remote method:
 
-The provider includes `MethodProvider` and uses the `remote_method` declaration to tell LiveResource what methods it provides. Method senders include `MethodSender` and there are a couple of ways to send a method:
+* Just call the method exactly as-is, like `divide(...)`, which blocks
+  the calling thread until the resource responds. If the resource's
+  method raises an exception, LiveResource's method dispatcher traps
+  the exception, serializes it, and the exception is raised in the
+  caller's thread.
 
-* `remote_send` is the most similar to Ruby's built-in `send`: it waits for the method to complete and gives you back the method's return value.
+* Call asynchronously in a fire-and-forget matter by adding an
+  exclamation point to the end of the method name, like
+  `divide!(...)`, with the downside of not being able to get a
+  response.
 
-* `remote_send_async` allows the sender to fire off a method without blocking. `remote_send_async` returns a token that the caller can later pass to `done_with?` or `wait_for_done`. To get the method's return value, `wait_for_done` will block (if needed) for the remote method to complete and give you the return value. To check on a method without blocking, call `done_with?` which returns true if the method is complete.
+* Call asynchronously and get the return value later by adding a
+  question mark to the end of the method name, like `divide?(...)`,
+  which we'll discuss shortly.
 
-The provider must run a thread that dispatches methods. This stays blocked except when a method is executing. If a Ruby process only exists to be a LiveResource method provider, you could use a construct like this to block the initial thread until an interrupt signal is received:
+### Call Method and Check Value Later
 
-    Signal.trap("INT") { s.stop_method_dispatcher }
-    s.start_method_dispatcher.join
+There are many times when blocking on a remote method isn't
+acceptable. Continuing the above example, here's how to fire off the
+method and come back for the result later:
 
-As with normal Ruby method calls, the number of parameters passed into `remote_send` must match the number of parameters expected by the method. If these don't match, an `ArgumentError` will be raised.
+		m = LiveResource::any(:math)
+    m.divide?(10, 5)
+    # .. do something else ..
+		m.value # may block, then --> 2
 
-If an exception is raised by the method provider, that exception is trapped by LiveResource and raised by whoever is getting the method's return value. Thus `remote_send` and `wait_for_done` will raise any exceptions thrown by the remote method.
+    m.divide?(15, 5)
+		m.done? # --> true or false
+		# .. time elapses ..
+		m.done? # --> true
+		m.value # will not block --> 3
+
+    m.divide?(20, 5)
+		m.value(10) # wait up to 10 seconds, then --> 4
+
+The return value from question-mark form `method?` calls is a Future,
+which allows both polling, blocking, and block-with-timeout
+conventions.
+
+### Forwarding Methods
+
+TODO: needs documentation. In the meantime, refer to
+`test/method_forward_continue_test.rb`.
+
+## Configuring the Redis Client
+
+LiveResource will try to connect to Redis at `localhost` and its
+default port, 6379. If you need to change that, or any other client
+parameters, just assign a new Redis client.
+
+    LiveResource::RedisClient.redis = Redis.new(hostname: 'machine-c.local')
+
+## Missing LiveResource 1.x Features
+
+Some features from 1.x have not been brought to 2.0 yet.
+
+### Attribute Read-Modify-Write
+
+NOTE: the R/M/W from LiveResource 1 is not currently supported in
+LiveResource 2. It will be added soon, with enhancements for modifying
+multiple attributes in one atomic operation.
+
+### Attribute Publish/Subscribe
+
+NOTE: attribute pub/sub from LiveResource 1 is not currently supported
+in LiveResource 2. It was never used within Spectra Logic, so it may
+be dropped.
 
 ## To-Do
 
 (This section is my to-do list for future versions of LiveResource. -jdc)
 
-Enhance subscriber notation, use hash for options:
+* More formally specify and test edge-case behaviors, for example:
 
-    class C
-      include LiveResource::Subscriber
+  - Getting/setting attributes that don't exist.
 
-      # List of symbols implies subscription with callback methods 
-      # of the same name.
-      remote_subscription :foo, :bar
-      
-      # Hash (or list of hashes) implies subscriptions with callback
-      # methods explicitly specified.
-      remote_subscription :baz => :method
-    end
+  - Forward/continue with methods that fail, methods that time out
+    because no resource is available.
 
-Simplify setting the namespace when it's the same for all instances of a class:
+  - Startup order problems with resources and clients of them. Any way
+    allow clients to wait and retry?
 
-    class C
-      include LiveResource::Attribute
-  
-      # Current way to set it (works great for per-instance namespaces):
-      def initialize(namespace)
-        self.namespace = namespace
-      end
-  
-      # Additional way (would be great for per-class namespace):
-      remote_namespace 'foo.bar'
-    end
+  - Serialize exceptions in a less Ruby-specific manner.
 
-Useful namespace default when none is set explicitly (e.g., pid of current process).
+  - Merge exception backtrace properly. (ResourceProxy#wait_for_done)
 
-Investigate odd benchmark results (4 core/8 thread Xserve, local Redis process):
+* Benchmarking: try multiple redis clients
 
-- Best attribute read/write performance with one thread; seems like we'd do better with multiple due to IO multiplexing if nothing else. (Perhaps my benchmark is busted.)  -->  On further thought, I'm pretty sure the Redis gem is using a single client for all threads. This would be a plausible explanation since the one client is blocked during IO.
+* Tools/Debugging:
 
-- Best method call performance is synchronous with one thread.  -->  Also sharing one client?
+  - Text/graphical resource monitor/explorer
 
-Port all tests from old/state_publisher_test.rb.
+  - Logging: allow runtime logging level changes (possibly via built-in remote method)
 
-Finish rdoc, test to make sure it looks right.
+  - Logging: syslog setup
 
-Meaningful examples, e.g. iostat.
-
-## Future Plans
-
-Integrate (or merge) with ActiveService for automatic discovery of resources.
+* Finish rdoc, test to make sure it looks right.
 
 ## License / Copying
 
@@ -273,5 +247,5 @@ See the file `COPYING`.
 
 ## Contributors
 
-* Josh Carter: original author
-* Rob Grimm: TTL on remote_writer, methods with optional params (thanks Rob!)
+LiveResource is brought to you by Josh Carter, Mark von Minden, and
+Rob Grimm of Spectra Logic.
