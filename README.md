@@ -20,7 +20,13 @@ TODO for LR 2.0:
 
 - Benchmarking: try multiple redis clients
 
+- Tools/Debugging:
 
+  * Text/graphical resource monitor/explorer
+
+  * Logging: allow runtime logging level changes (possibly via built-in remote method)
+
+  * Logging: syslog setup
 
 
 (old stuff below)
