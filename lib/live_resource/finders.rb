@@ -19,7 +19,7 @@ module LiveResource
       end
 
       if block.nil?
-        block = lambda { |name| name == resource_name.to_s ? name.to_s : nil }
+        block = lambda { |name| name == RedisClient.redisized_key(resource_name) ? name : nil }
       end
 
       redis_name = RedisClient.new(resource_class, nil).all.find do |name|
