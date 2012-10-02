@@ -25,6 +25,10 @@ task :clean do
   FileUtils.rm_rf 'pkg'
 end
 
+task :ctags do
+  system 'ctags -R .'
+end
+
 gem_spec = Gem::Specification.new do |spec|
   spec.name = 'liveresource'
   spec.summary = 'Live Resource'
