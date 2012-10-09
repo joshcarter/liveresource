@@ -25,6 +25,8 @@ The underlying tools, however, are available to any language: Redis is the hub f
 
 LiveResource requires:
 
+* Ruby 1.8.7, 1.9.x, or JRuby. (Most recently tested with MRI 1.9.3, JRuby 1.6.7.2)
+
 * [Redis 2.2+.](http://redis.io/) server. (Redis 1.x does not support commands needed by LiveResource.)
 
 * [redis-rb](https://github.com/ezmobius/redis-rb) gem.
@@ -192,57 +194,6 @@ As with normal Ruby method calls, the number of parameters passed into `remote_s
 
 If an exception is raised by the method provider, that exception is trapped by LiveResource and raised by whoever is getting the method's return value. Thus `remote_send` and `wait_for_done` will raise any exceptions thrown by the remote method.
 
-## To-Do
-
-(This section is my to-do list for future versions of LiveResource. -jdc)
-
-Enhance subscriber notation, use hash for options:
-
-    class C
-      include LiveResource::Subscriber
-
-      # List of symbols implies subscription with callback methods 
-      # of the same name.
-      remote_subscription :foo, :bar
-      
-      # Hash (or list of hashes) implies subscriptions with callback
-      # methods explicitly specified.
-      remote_subscription :baz => :method
-    end
-
-Simplify setting the namespace when it's the same for all instances of a class:
-
-    class C
-      include LiveResource::Attribute
-  
-      # Current way to set it (works great for per-instance namespaces):
-      def initialize(namespace)
-        self.namespace = namespace
-      end
-  
-      # Additional way (would be great for per-class namespace):
-      remote_namespace 'foo.bar'
-    end
-
-Useful namespace default when none is set explicitly (e.g., pid of current process).
-
-Investigate odd benchmark results (4 core/8 thread Xserve, local Redis process):
-
-- Best attribute read/write performance with one thread; seems like we'd do better with multiple due to IO multiplexing if nothing else. (Perhaps my benchmark is busted.)  -->  On further thought, I'm pretty sure the Redis gem is using a single client for all threads. This would be a plausible explanation since the one client is blocked during IO.
-
-- Best method call performance is synchronous with one thread.  -->  Also sharing one client?
-
-Port all tests from old/state_publisher_test.rb.
-
-Finish rdoc, test to make sure it looks right.
-
-Meaningful examples, e.g. iostat.
-
-## Future Plans
-
-Integrate (or merge) with ActiveService for automatic discovery of resources.
-
 ## Contributors
 
-* Josh Carter: original author
-* Rob Grimm: TTL on remote_writer, methods with optional params (thanks Rob!)
+Live Resource is brought to you by Josh Carter and Rob Grimm of Spectra Logic.

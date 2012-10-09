@@ -33,12 +33,15 @@ module LiveResource
       
     def stop_method_dispatcher
       return if @dispatcher_thread.nil?
-      
-      # Push to clone of RedisSpace; the first one will be blocked 
-      # waiting for a method token to come in. Trying to push to the
-      # same client will deadlock.
-      redis_space.clone.method_push(EXIT_TOKEN)
-      @dispatcher_thread.join
+
+      unless @dispatcher_thread.status.nil?
+        # Push to clone of RedisSpace; the first one will be blocked 
+        # waiting for a method token to come in. Trying to push to the
+        # same client will deadlock.
+        redis_space.clone.method_push(EXIT_TOKEN)
+        @dispatcher_thread.join
+      end
+
       @dispatcher_thread = nil
     end
       

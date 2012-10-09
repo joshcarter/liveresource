@@ -81,20 +81,21 @@ module LiveResource
       end
 
       # Slice off everything starting at that index
-      result = provider_trace[0 .. (index - 1)]
+      merged_trace = provider_trace[0 .. (index - 1)]
 
       # Add a trace that indicates that live resource was used
       # to link the sender to the provider.
-      result << 'via LiveResource'
+      merged_trace << 'via LiveResource'
 
-      # For the sender trace, remove the 'method_sendor'
-      # part of the trace.
+      # For the sender trace, remove the 'method_sender'
+      # part of the trace.  If a method_sender trace wasn't found,
+      # attach the entire sender_trace to the merged trace.
       index = sender_trace.index do |t| 
         t =~ /lib\/live_resource\/method_sender/
       end
-      result += sender_trace[(index + 1) .. (sender_trace.length - 1)]
+      index ||= -1
 
-      result
+      merged_trace + sender_trace[(index + 1) .. (sender_trace.length - 1)]
     end
   end
 end

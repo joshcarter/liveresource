@@ -135,7 +135,14 @@ module LiveResource
     def method_set_exclusive(token, key, value)
       params = ["#{@namespace}.methods.#{token}", key, serialize(value)]
       debug "hsetnx", params
-      @redis.hsetnx *params
+
+      # Older versions of Redis return 1/0 instead of true/false.
+      # Normalize the return values to true/false since 'if 0' is
+      # true in Ruby.
+      result = @redis.hsetnx *params
+      result = true if result == 1
+      result = false if result == 0
+      result
     end
     
     def method_set(token, key, value)

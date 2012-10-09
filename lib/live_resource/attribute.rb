@@ -5,6 +5,8 @@ module LiveResource
     include LiveResource::Common
     
     def remote_modify(attribute, &block)
+      # methods returns an array of strings in Ruby 1.8 and an array of
+      # symbols in Ruby 1.9.
       unless methods.map { |m| m.to_sym }.include?(attribute.to_sym)
         raise ArgumentError.new("remote_modify: no such attribute '#{attribute}'")
       end
