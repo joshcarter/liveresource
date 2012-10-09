@@ -194,6 +194,10 @@ As with normal Ruby method calls, the number of parameters passed into `remote_s
 
 If an exception is raised by the method provider, that exception is trapped by LiveResource and raised by whoever is getting the method's return value. Thus `remote_send` and `wait_for_done` will raise any exceptions thrown by the remote method.
 
+## License / Copying
+
+See the file `COPYING`.
+
 ## Contributors
 
 Live Resource is brought to you by Josh Carter and Rob Grimm of Spectra Logic.
