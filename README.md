@@ -242,6 +242,10 @@ Meaningful examples, e.g. iostat.
 
 Integrate (or merge) with ActiveService for automatic discovery of resources.
 
+## License / Copying
+
+See the file `COPYING`.
+
 ## Contributors
 
 * Josh Carter: original author
