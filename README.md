@@ -245,6 +245,10 @@ be dropped.
 
 See the file `COPYING`.
 
+## License / Copying
+
+See the file `COPYING`.
+
 ## Contributors
 
 LiveResource is brought to you by Josh Carter, Mark von Minden, and
