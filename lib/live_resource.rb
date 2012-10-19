@@ -1,4 +1,5 @@
 require_relative 'live_resource/resource'
+require_relative 'live_resource/supervisor'
 require 'set'
 
 # LiveResource is a framework for coordinating processes and status
