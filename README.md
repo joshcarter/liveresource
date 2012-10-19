@@ -57,11 +57,11 @@ Here's a resource with an attribute:
     class FavoriteColor
       include LiveResource::Resource
 
-			# Set up resource class and instance naming			
-			resource_class :favorite_color
-			resource_name :object_id
+      # Set up resource class and instance naming			
+      resource_class :favorite_color
+      resource_name :object_id
 
-			# Declare remote attributes
+      # Declare remote attributes
       remote_writer :favorite
     end
     
@@ -90,7 +90,7 @@ This resource demonstrates several points:
 Now let's access the above-published favorite color:
 
     r = LiveResource::any(:favorite_color)
-		r.favorite # --> "blue"
+    r.favorite # --> "blue"
 
 LiveResource includes the finders `find`, `any`, and `all`. The object
 returned is a *proxy* for the real resource, which could be in a
@@ -108,32 +108,31 @@ Attributes are good for publishing state information, but how do you
 calling from one object to another. Like attributes, it works great
 across processes and machines. An example:
 
-		#
-		# Running in process A
+    #
+    # Running in process A
     #
     class MathResource
       include LiveResource::Resource
 
-			remote_class :math
-			remote_name :object_id
+      remote_class :math
+      remote_name :object_id
 
       def divide(dividend, divisor)
         raise ArgumentError.new("cannot divide by zero") if divisor == 0
-    
         dividend / divisor
       end
     end
 
-		# Creating an instances starts its method dispatcher thread.
-		MathResource.new
-		sleep
+    # Creating an instances starts its method dispatcher thread.
+    MathResource.new
+    sleep
 
-		# 
+    # 
     # Running in processs B
-		#
-		m = LiveResource::any(:math)
+    #
+    m = LiveResource::any(:math)
     m.divide(10, 5) # --> 2
-		m.divide(1, 0)  # --> raises ArgumentError
+    m.divide(1, 0)  # --> raises ArgumentError
 
 The resource does not need to explicitly declare its remote methods;
 any public methods are automatically remote-callable. (Methods of
@@ -164,19 +163,19 @@ There are many times when blocking on a remote method isn't
 acceptable. Continuing the above example, here's how to fire off the
 method and come back for the result later:
 
-		m = LiveResource::any(:math)
+    m = LiveResource::any(:math)
     m.divide?(10, 5)
     # .. do something else ..
-		m.value # may block, then --> 2
+    m.value # may block, then --> 2
 
     m.divide?(15, 5)
-		m.done? # --> true or false
-		# .. time elapses ..
-		m.done? # --> true
-		m.value # will not block --> 3
+    m.done? # --> true or false
+    # .. time elapses ..
+    m.done? # --> true
+    m.value # will not block --> 3
 
     m.divide?(20, 5)
-		m.value(10) # wait up to 10 seconds, then --> 4
+    m.value(10) # wait up to 10 seconds, then --> 4
 
 The return value from question-mark form `method?` calls is a Future,
 which allows both polling, blocking, and block-with-timeout
