@@ -121,7 +121,7 @@ special notation for that:
       def update_favorite
         colors = ['red', 'blue', 'green']
 
-        remote_modify(:old_favorite, :favorite) do |attribute, value|
+        remote_attribute_modify(:old_favorite, :favorite) do |attribute, value|
           # Value of block will become the new value of the given attribute.
           if attribute == :old_favorite
             # Make the old_favorite our current favorite
@@ -134,13 +134,13 @@ special notation for that:
         end
       end
 
-The method `remote_modify` takes the attribute(s) to modify (as symbols) and a block. The block is
+The method `remote_attribute_modify` takes the attribute(s) to modify (as symbols) and a block. The block is
 provided the attribute name and the current value of the attribute; the ending value of the block
 becomes the new attribute value.
 
-Rather than perform locking on an attribute (which would slow down *all* reads and writes), LiveResource performs *optimistic locking* thanks to features in Redis. If the value of the attribute changes while the `remote_modify` block is executing, LiveResource simply replays the block with the changed value. This preserves the performance of attribute read/write and eliminates potential deadlocks.
+Rather than perform locking on an attribute (which would slow down *all* reads and writes), LiveResource performs *optimistic locking* thanks to features in Redis. If the value of the attribute changes while the `remote_attribute_modify` block is executing, LiveResource simply replays the block with the changed value. This preserves the performance of attribute read/write and eliminates potential deadlocks.
 
-As a consequence, however, the **block passed to `remote_modify` should not change external state that relies on the block only executing once.**
+As a consequence, however, the **block passed to `remote_attribute_modify` should not change external state that relies on the block only executing once.**
 
 ## Methods
 

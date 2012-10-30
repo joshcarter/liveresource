@@ -24,7 +24,14 @@ module LiveResource
       redis.attribute_write(key, value, options)
     end
 
-    def remote_modify(*attributes, &block)
+    # Modify an attribute or set of attributes based on the current value(s).
+    # Uses the optimistic locking mechanism provided by Redis WATCH/MULTI/EXEC
+    # transactions.
+    #
+    # The user passes in the a block which will be used to update the attribute(s).
+    # Since the block may need to be replayed, the user should not update any
+    # external state that relies on the block executing only once.
+    def remote_attribute_modify(*attributes, &block)
       invalid_attrs = attributes - redis.registered_attributes
       unless invalid_attrs.empty?
         raise ArgumentError.new("remote_modify: no such attribute(s) '#{invalid_attrs}'")
