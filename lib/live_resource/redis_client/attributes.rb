@@ -27,5 +27,9 @@ module LiveResource
     def attribute_write(key, value, options)
       set("#{@redis_class}.#{@redis_name}.attributes.#{key}", serialize(value))
     end
+
+    def attribute_watch(key)
+      watch("#{@redis_class}.#{redis_name}.attributes.#{key}")
+    end 
   end
 end

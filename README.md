@@ -101,6 +101,47 @@ automatically marshaled using YAML. (If you want to create a
 LiveResource interface in another programming language, you just need
 a Redis client and YAML.)
 
+## Attribute Read-Modify-Write
+Reading an attribute is an atomic operation; so is writing one. However, sometimes you need to read,
+modify, and write an attribute or set of attributes as an atomic operation.  LiveResource provides a
+special notation for that:
+
+    class FavoriteColor
+      include LiveResource::Resource 
+
+      # Set up resource class and instance naming			
+      resource_class :favorite_color
+      resource_name :object_id
+
+      remote_accessor :old_favorite
+      remote_accessor :favorite
+
+      # Update favorite color to anything except the currently-published
+      # favorite. Also save off the old favorite.
+      def update_favorite
+        colors = ['red', 'blue', 'green']
+
+        remote_modify(:old_favorite, :favorite) do |attribute, value|
+          # Value of block will become the new value of the given attribute.
+          if attribute == :old_favorite
+            # Make the old_favorite our current favorite
+            self.favorite
+          else
+            # Choose a new favorite
+            colors.delete(current_favorite)
+            colors.shuffle.first
+          end
+        end
+      end
+
+The method `remote_modify` takes the attribute(s) to modify (as symbols) and a block. The block is
+provided the attribute name and the current value of the attribute; the ending value of the block
+becomes the new attribute value.
+
+Rather than perform locking on an attribute (which would slow down *all* reads and writes), LiveResource performs *optimistic locking* thanks to features in Redis. If the value of the attribute changes while the `remote_modify` block is executing, LiveResource simply replays the block with the changed value. This preserves the performance of attribute read/write and eliminates potential deadlocks.
+
+As a consequence, however, the **block passed to `remote_modify` should not change external state that relies on the block only executing once.**
+
 ## Methods
 
 Attributes are good for publishing state information, but how do you
@@ -197,12 +238,6 @@ parameters, just assign a new Redis client.
 ## Missing LiveResource 1.x Features
 
 Some features from 1.x have not been brought to 2.0 yet.
-
-### Attribute Read-Modify-Write
-
-NOTE: the R/M/W from LiveResource 1 is not currently supported in
-LiveResource 2. It will be added soon, with enhancements for modifying
-multiple attributes in one atomic operation.
 
 ### Attribute Publish/Subscribe
 
