@@ -25,32 +25,41 @@ module LiveResource
     end
 
     def remote_modify(*attributes, &block)
-# TODO: support single attribute or list of attributes
-#
-#       unless methods.map { |m| m.to_sym }.include?(attribute.to_sym)
-#         raise ArgumentError.new("remote_modify: no such attribute '#{attribute}'")
-#       end
-#
-#       unless block
-#         raise ArgumentError.new("remote_modify requires a block")
-#       end
-#
-#       # Optimistic locking implemented along the lines of:
-#       #   http://redis.io/topics/transactions
-#       loop do
-#         # Watch/get the value
-#         redis_space.attribute_watch(attribute)
-#         v = redis_space.attribute_get(attribute)
-#
-#         # Block modifies the value
-#         v = block.call(v)
-#
-#         # Set to new value; if ok, we're done. Otherwise we'll loop and
-#         # try again with the new value.
-#         redis_space.multi
-#         redis_space.attribute_set(attribute, v)
-#         break if redis_space.exec
-#       end
+      invalid_attrs = attributes - redis.registered_attributes
+      unless invalid_attrs.empty?
+        raise ArgumentError.new("remote_modify: no such attribute(s) '#{invalid_attrs}'")
+      end
+
+      unless block
+        raise ArgumentError.new("remote_modify requires a block")
+      end
+
+      # Optimistic locking implemented along the lines of:
+      #   http://redis.io/topics/transactions
+      loop do
+        # Gather up the attributes and their new values
+        mods = attributes.map do |a|
+          # Watch/get the value
+          redis.attribute_watch(a)
+          v = redis.attribute_read(a, {})
+
+          # Block modifies the value
+          v = block.call(a, v)
+          [a, v]
+        end
+
+        # Start the transaction
+        redis.multi
+
+        mods.each do |mod|
+          # Set to new value; if ok, we're done.
+          redis.attribute_write(mod[0], mod[1], {})
+        end
+
+        # Attempt to execute the transaction. Otherwise we'll loop and
+        # try again with the new value.
+        break if redis.exec
+      end
     end
   end
 end
