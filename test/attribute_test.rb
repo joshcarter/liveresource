@@ -95,14 +95,14 @@ class AttributeModifyTest < Test::Unit::TestCase
     end
 
     def increment(*values)
-      remote_modify(*values) do |a, v|
+      remote_attribute_modify(*values) do |a, v|
         v + 1
       end
     end
 
     def increment_with_interference
       modified = false
-      remote_modify(:value1, :value2) do |a, v|
+      remote_attribute_modify(:value1, :value2) do |a, v|
         # modify the value from a different redis the
         # first time through
         unless modified
