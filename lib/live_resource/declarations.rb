@@ -74,7 +74,7 @@ module LiveResource
       # to create multiple attribute readers.
       def remote_reader(*params)
         @_instance_attributes ||= Set.new
-        options = nil
+        options = {}
 
         # One symbol and one hash is treated as a reader with options;
         # right now there are no reader options, so just pop them off.
@@ -114,7 +114,7 @@ module LiveResource
       #   seconds, the value of the attribute returns to nil.
       def remote_writer(*params)
         @_instance_attributes ||= Set.new
-        options = nil
+        options = {}
 
         # One symbol and one hash is treated as a writer with options.
         if (params.length == 2) && (params.last.is_a? Hash)
