@@ -17,6 +17,7 @@ class AttributeTest < Test::Unit::TestCase
     resource_name :object_id
 
     remote_accessor :string, :integer, :float, :my_class, :nil
+    remote_reader :foo
 
     def initialize
       self.string = "string"
@@ -24,6 +25,14 @@ class AttributeTest < Test::Unit::TestCase
       self.float = 3.14
       self.my_class = MyClass.new("foo", 42)
       self.nil = nil
+    end
+
+    def set_foo(value, overwrite=true)
+      if overwrite
+        remote_attribute_write(:foo, value)
+      else
+        remote_attribute_writenx(:foo, value)
+      end
     end
   end
 
@@ -77,6 +86,26 @@ class AttributeTest < Test::Unit::TestCase
     ap = LiveResource::any(:attribute_provider)
 
     assert_equal nil, ap.nil
+  end
+
+  def test_no_overwrite
+    ap = LiveResource::any(:attribute_provider)
+
+    # Foo should be not set.
+    assert_equal nil, ap.foo
+
+    # Set it for the first time, telling it not overwrite. This should work, as it
+    # has never been set before
+    ap.set_foo(23, false)
+    assert_equal 23, ap.foo
+
+    # Try again, it should not be overwritten
+    ap.set_foo(13, false)
+    assert_equal 23, ap.foo
+
+    # Now overwrite it
+    ap.set_foo(13, true)
+    assert_equal 13, ap.foo
   end
 end
 

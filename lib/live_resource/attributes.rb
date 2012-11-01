@@ -24,6 +24,11 @@ module LiveResource
       redis.attribute_write(key, value, options)
     end
 
+    # Write a new value to an attribute if it doesn't exist yet.
+    def remote_attribute_writenx(key, value)
+      remote_attribute_write(key, value, no_overwrite: true)
+    end
+
     # Modify an attribute or set of attributes based on the current value(s).
     # Uses the optimistic locking mechanism provided by Redis WATCH/MULTI/EXEC
     # transactions.
@@ -48,7 +53,7 @@ module LiveResource
         mods = attributes.map do |a|
           # Watch/get the value
           redis.attribute_watch(a)
-          v = redis.attribute_read(a, {})
+          v = redis.attribute_read(a)
 
           # Block modifies the value
           v = block.call(a, v)
@@ -60,7 +65,7 @@ module LiveResource
 
         mods.each do |mod|
           # Set to new value; if ok, we're done.
-          redis.attribute_write(mod[0], mod[1], {})
+          redis.attribute_write(mod[0], mod[1])
         end
 
         # Attempt to execute the transaction. Otherwise we'll loop and
