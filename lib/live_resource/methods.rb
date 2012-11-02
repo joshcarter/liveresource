@@ -7,7 +7,9 @@ module LiveResource
     # Start the method dispatcher for this resource. On return, the
     # resource will be visible to finders (.all(), etc.)
     # and remote methods may be called.
-    def start
+    def start(*instance_init_params)
+      @_instance_init_params = *instance_init_params
+
       if @dispatcher
         @dispatcher.start
       else
@@ -34,6 +36,14 @@ module LiveResource
         remote_singleton_methods
       else
         self.class.remote_instance_methods
+      end
+    end
+
+    def init_params
+      if self.is_a? Class
+        nil
+      else
+        @_instance_init_params
       end
     end
   end

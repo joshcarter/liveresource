@@ -31,8 +31,9 @@ module LiveResource
           alias :ruby_new :new
 
           def new(*params)
+            # Stash away the resource's init params
             obj = ruby_new(*params)
-            LiveResource::register obj
+            LiveResource::register obj, *params
             obj
           end
         end

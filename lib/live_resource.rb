@@ -13,13 +13,13 @@ module LiveResource
   # registered and its method dispatcher is running.
   #
   # @param resource [LiveResource::Resource] the object to register
-  def self.register(resource)
+  def self.register(resource, *instance_init_params)
     # puts "registering #{resource.to_s}"
 
     @@resources ||= Set.new
     @@resources << resource
 
-    resource.start
+    resource.start *instance_init_params
   end
 
   # Unregister the resource, removing it from discovery and stopping

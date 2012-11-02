@@ -53,7 +53,7 @@ module LiveResource
 
       # Need to register our class and instance in Redis so the finders
       # (all, any, etc.) will work.
-      redis.register
+      redis.register @resource.init_params
 
       @running = true
 
