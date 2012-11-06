@@ -1,15 +1,6 @@
 require_relative '../test_helper'
 
 class TestClass < Test::Unit::TestCase
-  class TestSupervisor
-    include LiveResource::Supervisor
-
-    def initialize(name)
-      @name = name
-    end
-
-  end
-
   def setup
     @ts = LiveResource::Supervisor::Supervisor.new
     @q = Queue.new
