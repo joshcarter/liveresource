@@ -1,4 +1,5 @@
 require_relative 'supervisor/process_supervisor'
+require_relative 'supervisor/resource_supervisor'
 
 # Main supervisor class. This can be used to monitor both processes
 # and resources. The real work is done in the ProcessSupervisor
@@ -28,21 +29,24 @@ module LiveResource
   module Supervisor
     class Supervisor
 
+      PROCESS_POLL_INTERVAL = 2
+      RESOURCE_POLL_INTERVAL = 2
+
       attr_reader :process_supervisor
       attr_reader :resource_supervisor
 
       # Supervise a single process given by "path"
-      def supervise_process(name, path, options={}, &event_callback)
-        @process_supervisor ||= LiveResource::Supervisor::ProcessSupervisor.new
-        @process_supervisor.add_process(name, path, options, &event_callback)
+      def supervise_process(name, path, options={}, &block)
+        @process_supervisor ||= LiveResource::Supervisor::ProcessSupervisor.new(PROCESS_POLL_INTERVAL)
+        @process_supervisor.add_process(name, path, options, &block)
       end
 
       # Supervise a set of processes whose executables live
       # underneath the given path. Note options include a regex
       # on how to match the executables. Default is "all files"
-      def supervise_directory(name, path, options={}, &event_callback)
-        @process_supervisor ||= LiveResource::Supervisor::ProcessSupervisor.new
-        @process_supervisor.add_directory(name, path, options, &event_callback)
+      def supervise_directory(name, path, options={}, &block)
+        @process_supervisor ||= LiveResource::Supervisor::ProcessSupervisor.new(PROCESS_POLL_INTERVAL)
+        @process_supervisor.add_directory(name, path, options, &block)
       end
 
       # Supervise a resource of the given class and name. Your supervisor
@@ -65,7 +69,9 @@ module LiveResource
       #   LiveResource::run
       # end
       #
-      def supervise_resource(resource_class, resource_name=nil, options={})
+      def supervise_resource(resource_class, options={}, &block)
+        @resource_supervisor ||= LiveResource::Supervisor::ResourceSupervisor.new(RESOURCE_POLL_INTERVAL)
+        @resource_supervisor.add_resource(resource_class, options, &block)
       end
 
       def restart_process(name)
@@ -91,10 +97,12 @@ module LiveResource
 
       def run
         @process_supervisor.run if @process_supervisor
+        @resource_supervisor.run if @resource_supervisor
       end
 
       def stop
         @process_supervisor.stop if @process_supervisor
+        @resource_supervisor.stop if @resource_supervisor
       end
     end  
   end
