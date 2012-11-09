@@ -4,11 +4,21 @@ module LiveResource
   module Methods
     attr_reader :dispatcher
 
+    # Register this resource with LiveResource.
+    # When resources are registered their basic state is placed into Redis,
+    # however they may not be used until they have been started.
+    def register(*instance_init_params)
+      redis.register self, instance_init_params
+      self
+    end
+
     # Start the method dispatcher for this resource. On return, the
     # resource will be visible to finders (.all(), etc.)
     # and remote methods may be called.
-    def start(*instance_init_params)
-      @_instance_init_params = *instance_init_params
+    def start
+      unless redis.registered?
+        raise RuntimeError, "Resource must be registerd before it can be started."
+      end
 
       if @dispatcher
         @dispatcher.start
@@ -36,14 +46,6 @@ module LiveResource
         remote_singleton_methods
       else
         self.class.remote_instance_methods
-      end
-    end
-
-    def init_params
-      if self.is_a? Class
-        nil
-      else
-        @_instance_init_params
       end
     end
   end

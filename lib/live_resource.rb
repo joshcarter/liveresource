@@ -8,18 +8,15 @@ require 'set'
 # LiveResource::Finders for discovering resources, and
 # LiveResource::ResourceProxy for using resources.
 module LiveResource
-  # Register the resource, allowing its discovery and methods to be
-  # called on it. This method will block until the resource is fully
-  # registered and its method dispatcher is running.
+  # Register the resource. Note that the resource must first be started
+  # before it can be discovered and methods can be called on it.
   #
   # @param resource [LiveResource::Resource] the object to register
   def self.register(resource, *instance_init_params)
-    # puts "registering #{resource.to_s}"
-
     @@resources ||= Set.new
     @@resources << resource
 
-    resource.start *instance_init_params
+    resource.register *instance_init_params
   end
 
   # Unregister the resource, removing it from discovery and stopping

@@ -27,16 +27,31 @@ module LiveResource
       def self.extended(base)
         class << base
           # Override the regular new routine with a custom new
-          # which auto-registers the resource.
+          # which auto-registers and starts the resource.
           alias :ruby_new :new
 
           def new(*params)
-            # Stash away the resource's init params
             obj = ruby_new(*params)
+
+            # Resources always auto-regiser themselves. However,
+            # only unsupervised resources start on their own. It
+            # is the responsibility of the resource supervisor to
+            # start supervised resources.
             LiveResource::register obj, *params
+            obj.start unless supervised
+
             obj
           end
         end
+      end
+
+      def supervise
+        @_supervised = true
+      end
+
+      def supervised
+        @_supervised ||= false
+        @_supervised
       end
 
       # FIXME: comment this
@@ -195,6 +210,10 @@ module LiveResource
       def singleton_method_added(m)
         @_singleton_methods ||= Set.new
         @_singleton_methods << m
+      end
+
+      def supervise
+        @_supervised = true
       end
     end
   end

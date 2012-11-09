@@ -1,6 +1,6 @@
 require_relative 'test_helper'
 
-class InstanceEventsTest < Test::Unit::TestCase
+class RegistrationTest < Test::Unit::TestCase
   class Foo
     include LiveResource::Resource
 
@@ -45,15 +45,32 @@ class InstanceEventsTest < Test::Unit::TestCase
     msg = q.pop
     assert_equal "subscribed", msg
 
+    # There shouldn't be anything in Redis about this resource yet.
+    assert !r.registered?
+    assert_equal 0, r.num_instances
+    assert !r.local_instances?
+
     # Register the resource and wait for a message.
-    LiveResource::register Foo
+    class_resource = LiveResource::register Foo
+
+    # Should get a created message for this resource.
     msg = q.pop
+    assert_equal "class.foo.created", msg
+
+    # The resource is registered but there are no instances
+    assert r.registered?
+    assert_equal 0, r.num_instances
+    assert !r.local_instances?
+    assert !r.pid_has_instance?(Process.pid)
+
+    old_generation = r.get(r.instance_host_generation_key).to_i
+
+    # Start the resource
+    class_resource.start
 
     # Should get a started message for this resource.
+    msg = q.pop
     assert_equal "class.foo.started", msg
-
-    # There should be one instance of the class resource.
-    assert_equal 1, r.num_instances
 
     # Class resources don't have instance parameters.
     assert_equal nil, r.instance_params
@@ -61,18 +78,18 @@ class InstanceEventsTest < Test::Unit::TestCase
     # There should only be one local instance, and it should
     # be this process.
     assert_equal 1, r.local_instance_pids.count
-    assert_equal true, r.pid_has_instance?(Process.pid)
+    assert r.pid_has_instance?(Process.pid)
+    assert r.instance_host_generation > old_generation
 
     # Stop the resource and wait for a stopped message.
     LiveResource::stop
     msg = q.pop
-
     assert_equal "class.foo.stopped", msg
 
     # Make sure everything is cleaned up.
     assert_equal 0, r.num_instances
     assert_equal 0, r.local_instance_pids.count
-    assert_equal false, r.pid_has_instance?(Process.pid)
+    assert !r.pid_has_instance?(Process.pid)
   end
 
   def test_new_instance
@@ -97,12 +114,12 @@ class InstanceEventsTest < Test::Unit::TestCase
     msg = q.pop
     assert_equal "subscribed", msg
 
-    LiveResource::register Foo
+    LiveResource::register(Foo).start
     LiveResource::find(:foo).new("foo")
 
-    # Ensure we get both started events (note we don't know which order we'll get them
+    # Ensure we get all created/started events (note we don't know which order we'll get them
     # in).
-    events = ["class.foo.started", "foo.foo.started"]
+    events = ["class.foo.created", "class.foo.started", "foo.foo.created", "foo.foo.started"]
     until events.empty?
       msg = q.pop
       assert_not_nil events.delete(msg)
@@ -117,7 +134,7 @@ class InstanceEventsTest < Test::Unit::TestCase
     # There should only be one local instance, and it should
     # be this process.
     assert_equal 1, r.local_instance_pids.count
-    assert_equal true, r.pid_has_instance?(Process.pid)
+    assert r.pid_has_instance?(Process.pid)
 
     LiveResource::stop
 
@@ -134,6 +151,6 @@ class InstanceEventsTest < Test::Unit::TestCase
     assert_equal 0, r.num_instances
     assert_equal ["foo"], r.instance_params
     assert_equal 0, r.local_instance_pids.count
-    assert_equal false, r.pid_has_instance?(Process.pid)
+    assert !r.pid_has_instance?(Process.pid)
   end
 end

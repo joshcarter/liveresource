@@ -42,7 +42,7 @@ class ParamsTest < Test::Unit::TestCase
     LiveResource::RedisClient.logger.level = Logger::INFO
 
     # Class resources
-    LiveResource::register ParamsClass
+    LiveResource::register(ParamsClass).start
 
     @test_class = LiveResource::find(:params_class)
     @test_instance = @test_class.new("bob", 42)
