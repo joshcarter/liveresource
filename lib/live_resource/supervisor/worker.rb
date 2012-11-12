@@ -200,7 +200,8 @@ module LiveResource
       def start
         raise RuntimeError, "Attempting to start #{self} in non-runnbable state." if !self.runnable?
 
-        resource.start
+        LiveResource::register @resource unless redis.registered?
+        @resource.start
         @thread = @resource.dispatcher.thread
 
         super
@@ -220,6 +221,10 @@ module LiveResource
 
       def to_s
         "Worker Resource: resource=#{@resource}, state=#{@state}"
+      end
+
+      def redis
+        @resource.redis
       end
     end
 
