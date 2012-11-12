@@ -21,16 +21,20 @@ module LiveResource
 
       def wait_loop
         loop do
-          break if stopping? and !running_workers?
+          break if stopping? and not running_workers?
 
           begin
             thread = @threads.next_wait
           rescue Exception
-            # No more threads?
+            # No more workers?
             thread = nil
           end
 
-          next unless thread
+          unless thread
+            # Nothing to do, let another Thread run
+            Thread.pass
+            next
+          end
 
           # look up worker
           worker = @workers.find { |w| w.thread == thread }

@@ -58,7 +58,11 @@ module LiveResource
             pid = nil
           end
 
-          next unless pid
+          unless pid
+            # Nothing to do, let another Thread run
+            Thread.pass
+            next
+          end
 
           # look up worker
           worker = @workers.find { |w| w.pid == pid }
