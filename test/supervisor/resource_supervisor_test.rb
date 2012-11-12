@@ -36,6 +36,9 @@ class ResourceSupervisorTest < Test::Unit::TestCase
 
   def setup
     Redis.new.flushall
+
+    LiveResource::RedisClient.logger.level = Logger::INFO
+    
     @ts = LiveResource::Supervisor::Supervisor.new
     @ew = TestEventWaiter.new
   end
@@ -76,7 +79,7 @@ class ResourceSupervisorTest < Test::Unit::TestCase
 
     @ts.stop
 
-    # Wait for up to five seconds for the workers to stop
+    # Wait for up to 5 seconds for the workers to stop
     assert_equal :stopped, @ew.wait_for_event(5)
     assert_equal false, rs.running_workers?
 

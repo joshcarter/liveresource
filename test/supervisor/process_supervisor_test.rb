@@ -130,7 +130,7 @@ class ProcessSupervisorTest < Test::Unit::TestCase
 
     # Wait up to 5 seconds for workers to stop
     loop do
-      break if @ew.wait_for_event(5) != :stopped
+      break if @ew.wait_for_event(5) == :stopped
     end
   end
 end
