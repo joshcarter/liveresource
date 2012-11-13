@@ -223,6 +223,18 @@ module LiveResource
         "Worker Resource: resource=#{@resource}, state=#{@state}"
       end
 
+      def resource_class
+        @resource.resource_class
+      end
+
+      def resource_name
+        @resource.resource_class
+      end
+
+      def is_class
+        resource_name == "class"
+      end
+
       def redis
         @resource.redis
       end
@@ -253,10 +265,6 @@ module LiveResource
 
       def remove(worker)
         @mutex.synchronize { @workers.delete worker }
-      end
-
-      def remove(worker)
-        @mutex.synchronize { @workers.clone }
       end
 
       def each(&block)
