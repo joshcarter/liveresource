@@ -9,15 +9,83 @@ module LiveResource
     class ResourceSupervisor < WorkerSupervisor
       def initialize(poll_interval)
         @threads = ThreadsWait.new
+        @instance_monitors = {}
         super(poll_interval)
       end
 
-      def add_resource(resource, options={}, &block)
-        worker = ResourceWorker.new(resource, options, block, process_worker_events)
-        @events.push({type: :add_worker, worker: worker})
+      def add_resource(resource, options={}, &client_callback)
+        unless resource.is_a? Class
+          raise ArgumentError, "Must specify a class resource. #{resource}"
+        end
+
+        options[:client_callback] = client_callback if block_given?
+
+        name = ResourceWorker.worker_name(resource.resource_class, resource.resource_name)
+        if @workers.find_by_name(name)
+          raise ArgumentError, "Already supervising this resource class: #{resource}"
+        end
+
+        # Register the class resource with LR.
+        resource.supervise
+        resource.register
+
+        # Add a worker for this resource.
+        worker = add_resource_worker(resource, options)
+
+        # Add workers for instances which alread exist in Redis.
+        add_missing_instances(worker)
+
+        # Create instance monitor
+        add_instance_monitor(worker)
       end
 
       private
+
+      def add_resource_worker(resource, options={})
+        options[:internal_callback] = process_worker_events
+        worker = ResourceWorker.new(resource, options)
+        @events.push({type: :add_worker, worker: worker})
+        worker
+      end
+
+      # Brute force for now
+      def add_missing_instances(class_worker)
+        unless class_worker.is_class?
+          raise ArgumentError, "Must specify a class resource worker."
+        end
+
+        # Get all the registered instances of this class
+        instances = class_worker.redis.registered_instances
+
+        instances.each do |i|
+          # Is there already a worker for this instance?
+          name = ResourceWorker.worker_name(class_worker.resource_name, i)
+          next if @workers.find_by_name(name)
+
+          # Add the instance.
+          init_params = class_worker.redis.instance_params(class_worker.resource_name, i)
+          resource = class_worker.resource.new(*init_params)
+          add_resource_worker(resource, class_worker.options)
+        end
+      end
+
+      def add_instance_monitor(worker)
+        channel = worker.redis.instance_channel
+
+        # Already monitoring instances of this resource class
+        return if @instance_monitors[channel]
+
+        @instance_monitors[channel] = Thread.new do
+          subscribed_client = RedisClient.redis.clone
+          subscribed_client.subscribe(channel) do |on|
+            on.message do |channel, msg|
+              # TODO: Better messages. Use instance name to make this 
+              # more efficient.
+              add_missing_instances(worker) if msg.include? "created"
+            end
+          end
+        end
+      end
 
       def wait_loop
         loop do
@@ -45,6 +113,14 @@ module LiveResource
 
           # Restart or suspend worker
           @events.push({type: :worker_exited, worker: worker})
+        end
+      end
+
+      def do_stop
+        super
+        @instance_monitors.each_value do |thread|
+          Thread.kill thread
+          thread.join
         end
       end
 

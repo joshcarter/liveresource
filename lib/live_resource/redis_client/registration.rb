@@ -4,12 +4,16 @@ module LiveResource
     # Hash name is the class_name.instances (note there's one hash for all class resources).
     # Keys are instances names.
     # Values are counts (this is the total number of instances of that type in the cluster).
-    def instances_key
-      "#{@redis_class}.instances"
+    def instances_key(redis_class=nil)
+      redis_class = redis_class.nil? ? @redis_class : RedisClient.redisized_key(redis_class)
+      "#{redis_class}.instances"
     end
 
-    def instance_params_key
-      "#{@redis_class}.#{@redis_name}.instance_params"
+    def instance_params_key(redis_class=nil, redis_name=nil)
+      redis_class = redis_class.nil? ? @redis_class : RedisClient.redisized_key(redis_class)
+      redis_name = redis_name.nil? ? @redis_name : RedisClient.redisized_key(redis_name)
+
+      "#{redis_class}.#{redis_name}.instance_params"
     end
 
     def instance_host_key
@@ -43,9 +47,9 @@ module LiveResource
 
         setnx instance_host_generation_key, 0
         hsetnx instances_key, @redis_name, 0
-        publish_event("created")
         break if exec
       end
+      publish_event("created")
     end
 
     def registered?
@@ -66,9 +70,9 @@ module LiveResource
 
         zadd instance_host_key, generation, Process.pid
         hincrby instances_key, @redis_name, 1
-        publish_event("started")
         break if exec
       end
+      publish_event("started")
     end
 
     def stop_instance
@@ -80,9 +84,9 @@ module LiveResource
 
         zrem instance_host_key, Process.pid
         hincrby instances_key, @redis_name, -1
-        publish_event("stopped")
         break if exec
       end
+      publish_event("stopped")
     end
 
     def all
@@ -90,6 +94,27 @@ module LiveResource
 
       hgetall(instances_key).each_pair do |i, count|
         names << i if (count.to_i > 0)
+      end
+
+      names
+    end
+
+    # Get all the instances of a given class
+    def registered_instances
+      names = []
+
+      if is_class?
+        key = instances_key(@redis_name)
+      else
+        key = instances_key
+      end
+
+      instances = hgetall(key)
+
+      unless instances.nil?
+        instances.each_key do |key|
+          names << key
+        end
       end
 
       names
@@ -103,12 +128,8 @@ module LiveResource
 
     # Get the initialization params used for this instance.
     # NOTE: class resources don't have init params.
-    def instance_params
-      if is_class?
-        nil
-      else
-        deserialize(get instance_params_key)
-      end
+    def instance_params(redis_class=nil, redis_name=nil)
+        deserialize(get instance_params_key(redis_class, redis_name))
     end
 
     # Get the list of process ids where this resource is running instances
@@ -145,6 +166,7 @@ module LiveResource
     private
 
     def publish_event(type)
+      # TODO: better messages, probably as an object or at least a hash
       publish instance_channel, "#{@redis_class}.#{@redis_name}.#{type}"
     end
   end

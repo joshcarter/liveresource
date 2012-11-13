@@ -3,11 +3,8 @@ module LiveResource
 
     # Basic state management and event notification for workers.
     class WorkerEvents
-      attr_reader :callbacks
-
       def initialize(*callbacks)
         @callbacks = Hash.new do |hash, key|
-          #hash[key] = lambda { |*_| }
           hash[key] = []
         end
 
@@ -48,25 +45,20 @@ module LiveResource
 
     class Worker
       attr_reader :name
-      attr_reader :restart_limit
-      attr_reader :suspend_period
+      attr_reader :options
       attr_reader :start_count
       attr_reader :start_time
+      attr_reader :client_callback
+      attr_reader :internal_callback
 
-      def initialize(name, options={}, *callbacks)
+      def initialize(name, options={})
         defaults = { restart_limit: 5, suspend_period: 120 }
-        options.merge!(defaults) { |key, v1, v2| v1 }
+        @options = options.merge!(defaults) { |key, v1, v2| v1 }
         @name = name
-        @restart_limit = options[:restart_limit]
-        @suspend_period = options[:suspend_period]
         @state = :stopped
         @start_count = 0
         @start_time = 0
-
-        # if no block is given, just use an empty block
-        #block = lambda { |*_| } unless block_given?
-        #@events = WorkerEvents.new(&block)
-        @events = WorkerEvents.new(*callbacks)
+        @events = WorkerEvents.new(client_callback, internal_callback)
       end
 
       def start
@@ -122,6 +114,32 @@ module LiveResource
 
       def to_s
         "Worker state=#{@state}"
+      end
+
+      def restart_limit
+        @options[:restart_limit]
+      end
+
+      def suspend_period
+        @options[:suspend_period]
+      end
+
+      def client_callback
+        if options[:client_callback]
+          options[:client_callback]
+        else
+          # Empty callback
+          lambda { |*_| }
+        end
+      end
+
+      def internal_callback
+        if options[:internal_callback]
+          options[:internal_callback]
+        else
+          # Empty callback
+          lambda { |*_| }
+        end
       end
     end
 
@@ -195,13 +213,14 @@ module LiveResource
         @resource = resource
         @thread = nil
 
-        super("#{resource_class}.#{resource_name}", options, *callbacks)
+        name = ResourceWorker.worker_name(resource.resource_class, resource.resource_name)
+        super(name, options, *callbacks)
       end
 
       def start
         raise RuntimeError, "Attempting to start #{self} in non-runnbable state." if !self.runnable?
 
-        LiveResource::register @resource unless redis.registered?
+        #LiveResource::register @resource unless redis.registered?
         @resource.start
         @thread = @resource.dispatcher.thread
 
@@ -221,7 +240,7 @@ module LiveResource
       end
 
       def to_s
-        "Worker Resource: resource=#{@resource}, state=#{@state}"
+        "Worker Resource: name=#{@name} resource=#{@resource}, state=#{@state}"
       end
 
       def resource_class
@@ -232,12 +251,16 @@ module LiveResource
         @resource.resource_name
       end
 
-      def is_class
-        resource_class == "class"
+      def is_class?
+        @resource.is_a? Class
       end
 
       def redis
         @resource.redis
+      end
+
+      def self.worker_name(resource_class, resource_name)
+        "#{resource_class}.#{resource_name}"
       end
     end
 

@@ -31,16 +31,23 @@ module LiveResource
           alias :ruby_new :new
 
           def new(*params)
-            obj = ruby_new(*params)
+            resource = ruby_new(*params)
 
             # Resources always auto-regiser themselves. However,
             # only unsupervised resources start on their own. It
             # is the responsibility of the resource supervisor to
             # start supervised resources.
-            LiveResource::register obj, *params
-            obj.start unless supervised
-
-            obj
+            
+            if supervised
+              # Register in Redis but do not put this object in the
+              # list of registered resources (the relevant supervisor
+              # will do that).
+              resource.register *params
+            else
+              LiveResource::register resource, *params
+              resource.start unless supervised
+            end
+            resource
           end
         end
       end

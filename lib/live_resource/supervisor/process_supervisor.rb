@@ -6,19 +6,21 @@ module LiveResource
   module Supervisor
     class ProcessSupervisor < WorkerSupervisor
       # Supervise a single process at the given path
-      def add_process(name, path, options={}, &block)
+      def add_process(name, path, options={}, &client_callback)
         exp_path = File.expand_path(path)
         raise ArgumentError, "#{exp_path} does not exist." unless File.exists? exp_path
         raise ArgumentError, "#{exp_path} is not executable." unless File.executable? exp_path
 
-        worker = ProcessWorker.new("#{name} (#{path})", exp_path, options, block)
+        options[:client_callback] = client_callback if block_given?
+        worker = ProcessWorker.new("#{name} (#{path})", exp_path, options)
         @events.push({type: :add_worker, worker: worker})
       end
 
       # Supervise all the processes in the given directory.
-      def add_directory(name, path, options={}, &block)
+      def add_directory(name, path, options={}, &client_callback)
         defaults = { pattern: /^.*$/ }
         options.merge!(defaults) { |key, v1, v2| v1 }
+        options[:client_callback] = client_callback if block_given?
 
         exp_path = File.expand_path(path)
         raise ArgumentError, "#{exp_path} does not exist." unless File.exists? exp_path
@@ -33,7 +35,7 @@ module LiveResource
           md = file.match options[:pattern]
           next unless md
 
-          worker = ProcessWorker.new("#{name} (#{file})", exp_file, options, block)
+          worker = ProcessWorker.new("#{name} (#{file})", exp_file, options)
           @events.push( {type: :add_worker, worker: worker})
           workers_added = true
         end
