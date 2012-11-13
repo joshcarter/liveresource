@@ -47,14 +47,16 @@ module LiveResource
     end
 
     class Worker
+      attr_reader :name
       attr_reader :restart_limit
       attr_reader :suspend_period
       attr_reader :start_count
       attr_reader :start_time
 
-      def initialize(options={}, *callbacks)
+      def initialize(name, options={}, *callbacks)
         defaults = { restart_limit: 5, suspend_period: 120 }
         options.merge!(defaults) { |key, v1, v2| v1 }
+        @name = name
         @restart_limit = options[:restart_limit]
         @suspend_period = options[:suspend_period]
         @state = :stopped
@@ -125,15 +127,13 @@ module LiveResource
 
     class ProcessWorker < Worker
       attr_reader :file
-      attr_reader :name
       attr_reader :pid
 
-      def initialize(file, name, options={}, *callbacks)
+      def initialize(name, file, options={}, *callbacks)
         @file = file
-        @name = name
         @pid = 0
 
-        super(options, *callbacks)
+        super(name, options, *callbacks)
       end
 
       def start
@@ -194,7 +194,8 @@ module LiveResource
       def initialize(resource, options={}, *callbacks)
         @resource = resource
         @thread = nil
-        super(options, *callbacks)
+
+        super("#{resource_class}.#{resource_name}", options, *callbacks)
       end
 
       def start
@@ -228,11 +229,11 @@ module LiveResource
       end
 
       def resource_name
-        @resource.resource_class
+        @resource.resource_name
       end
 
       def is_class
-        resource_name == "class"
+        resource_class == "class"
       end
 
       def redis
@@ -243,16 +244,16 @@ module LiveResource
     # Since the supervisors use multiple threads, we'd like a thread-safe way to add
     # workers the list, etc.
     #
-    # This is probably not strictly necessary under the MRI, but it seems like a good
+    # This is probably not strictly necessary under MRI, but it seems like a good
     # idea in general.
     class WorkerList
       def initialize
         @mutex = Mutex.new
-        @workers = []
+        @workers = {}
       end
 
       def workers
-        @mutex.synchronize { @workers.clone }
+        @mutex.synchronize { @workers.values }
       end
 
       def length
@@ -260,29 +261,45 @@ module LiveResource
       end
 
       def add(worker)
-        @mutex.synchronize { @workers << worker }
+        @mutex.synchronize do
+          # workers are only added if they don't already exist
+          # (never overwrite).
+          @workers[worker.name] ||= worker
+        end
       end
 
       def remove(worker)
-        @mutex.synchronize { @workers.delete worker }
+        @mutex.synchronize { @workers.delete worker.name }
       end
 
       def each(&block)
         raise ArgumentError, "Block expected" unless block_given?
         @mutex.synchronize do
-          @workers.each do |worker|
+          @workers.each_value do |worker|
             yield worker
           end
         end
       end
 
+      # Use find to search for a worker using arbitrary criteria
+      # matched in a block.
+      #
+      # O(n).
       def find(&block)
-        raise ArgumentError, "Block explected" unless block_given?
+        raise ArgumentError, "Block expected" unless block_given?
         @mutex.synchronize do
-          @workers.find do |worker|
+          name, worker = @workers.find do |name, worker|
             yield worker
           end
+          worker
         end
+      end
+
+      # Use find_by_name if you know the name of the worker.
+      #
+      # O(1)
+      def find_by_name(name)
+        @mutex.synchronize { @workers[name] }
       end
     end
   end

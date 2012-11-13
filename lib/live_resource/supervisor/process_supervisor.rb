@@ -11,7 +11,7 @@ module LiveResource
         raise ArgumentError, "#{exp_path} does not exist." unless File.exists? exp_path
         raise ArgumentError, "#{exp_path} is not executable." unless File.executable? exp_path
 
-        worker = ProcessWorker.new(exp_path, "#{name} (#{path})", options, block)
+        worker = ProcessWorker.new("#{name} (#{path})", exp_path, options, block)
         @events.push({type: :add_worker, worker: worker})
       end
 
@@ -33,7 +33,7 @@ module LiveResource
           md = file.match options[:pattern]
           next unless md
 
-          worker = ProcessWorker.new(exp_file, "#{name} (#{file})", options, block)
+          worker = ProcessWorker.new("#{name} (#{file})", exp_file, options, block)
           @events.push( {type: :add_worker, worker: worker})
           workers_added = true
         end
