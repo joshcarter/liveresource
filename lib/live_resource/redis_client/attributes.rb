@@ -20,12 +20,21 @@ module LiveResource
       attributes.map { |a| a.to_sym }
     end
 
-    def attribute_read(key, options)
+    def attribute_read(key, options={})
       deserialize(get("#{@redis_class}.#{@redis_name}.attributes.#{key}"))
     end
 
-    def attribute_write(key, value, options)
-      set("#{@redis_class}.#{@redis_name}.attributes.#{key}", serialize(value))
+    def attribute_write(key, value, options={})
+      redis_key = "#{@redis_class}.#{@redis_name}.attributes.#{key}"
+      if options[:no_overwrite]
+        setnx(redis_key, serialize(value))
+      else
+        set(redis_key, serialize(value))
+      end
     end
+
+    def attribute_watch(key)
+      watch("#{@redis_class}.#{redis_name}.attributes.#{key}")
+    end 
   end
 end

@@ -57,11 +57,11 @@ Here's a resource with an attribute:
     class FavoriteColor
       include LiveResource::Resource
 
-			# Set up resource class and instance naming			
-			resource_class :favorite_color
-			resource_name :object_id
+      # Set up resource class and instance naming			
+      resource_class :favorite_color
+      resource_name :object_id
 
-			# Declare remote attributes
+      # Declare remote attributes
       remote_writer :favorite
     end
     
@@ -90,7 +90,7 @@ This resource demonstrates several points:
 Now let's access the above-published favorite color:
 
     r = LiveResource::any(:favorite_color)
-		r.favorite # --> "blue"
+    r.favorite # --> "blue"
 
 LiveResource includes the finders `find`, `any`, and `all`. The object
 returned is a *proxy* for the real resource, which could be in a
@@ -101,6 +101,47 @@ automatically marshaled using YAML. (If you want to create a
 LiveResource interface in another programming language, you just need
 a Redis client and YAML.)
 
+## Attribute Read-Modify-Write
+Reading an attribute is an atomic operation; so is writing one. However, sometimes you need to read,
+modify, and write an attribute or set of attributes as an atomic operation.  LiveResource provides a
+special notation for that:
+
+    class FavoriteColor
+      include LiveResource::Resource 
+
+      # Set up resource class and instance naming			
+      resource_class :favorite_color
+      resource_name :object_id
+
+      remote_accessor :old_favorite
+      remote_accessor :favorite
+
+      # Update favorite color to anything except the currently-published
+      # favorite. Also save off the old favorite.
+      def update_favorite
+        colors = ['red', 'blue', 'green']
+
+        remote_attribute_modify(:old_favorite, :favorite) do |attribute, value|
+          # Value of block will become the new value of the given attribute.
+          if attribute == :old_favorite
+            # Make the old_favorite our current favorite
+            self.favorite
+          else
+            # Choose a new favorite
+            colors.delete(current_favorite)
+            colors.shuffle.first
+          end
+        end
+      end
+
+The method `remote_attribute_modify` takes the attribute(s) to modify (as symbols) and a block. The block is
+provided the attribute name and the current value of the attribute; the ending value of the block
+becomes the new attribute value.
+
+Rather than perform locking on an attribute (which would slow down *all* reads and writes), LiveResource performs *optimistic locking* thanks to features in Redis. If the value of the attribute changes while the `remote_attribute_modify` block is executing, LiveResource simply replays the block with the changed value. This preserves the performance of attribute read/write and eliminates potential deadlocks.
+
+As a consequence, however, the **block passed to `remote_attribute_modify` should not change external state that relies on the block only executing once.**
+
 ## Methods
 
 Attributes are good for publishing state information, but how do you
@@ -108,32 +149,31 @@ Attributes are good for publishing state information, but how do you
 calling from one object to another. Like attributes, it works great
 across processes and machines. An example:
 
-		#
-		# Running in process A
+    #
+    # Running in process A
     #
     class MathResource
       include LiveResource::Resource
 
-			remote_class :math
-			remote_name :object_id
+      remote_class :math
+      remote_name :object_id
 
       def divide(dividend, divisor)
         raise ArgumentError.new("cannot divide by zero") if divisor == 0
-    
         dividend / divisor
       end
     end
 
-		# Creating an instances starts its method dispatcher thread.
-		MathResource.new
-		sleep
+    # Creating an instances starts its method dispatcher thread.
+    MathResource.new
+    sleep
 
-		# 
+    # 
     # Running in processs B
-		#
-		m = LiveResource::any(:math)
+    #
+    m = LiveResource::any(:math)
     m.divide(10, 5) # --> 2
-		m.divide(1, 0)  # --> raises ArgumentError
+    m.divide(1, 0)  # --> raises ArgumentError
 
 The resource does not need to explicitly declare its remote methods;
 any public methods are automatically remote-callable. (Methods of
@@ -164,19 +204,19 @@ There are many times when blocking on a remote method isn't
 acceptable. Continuing the above example, here's how to fire off the
 method and come back for the result later:
 
-		m = LiveResource::any(:math)
+    m = LiveResource::any(:math)
     m.divide?(10, 5)
     # .. do something else ..
-		m.value # may block, then --> 2
+    m.value # may block, then --> 2
 
     m.divide?(15, 5)
-		m.done? # --> true or false
-		# .. time elapses ..
-		m.done? # --> true
-		m.value # will not block --> 3
+    m.done? # --> true or false
+    # .. time elapses ..
+    m.done? # --> true
+    m.value # will not block --> 3
 
     m.divide?(20, 5)
-		m.value(10) # wait up to 10 seconds, then --> 4
+    m.value(10) # wait up to 10 seconds, then --> 4
 
 The return value from question-mark form `method?` calls is a Future,
 which allows both polling, blocking, and block-with-timeout
@@ -198,12 +238,6 @@ parameters, just assign a new Redis client.
 ## Missing LiveResource 1.x Features
 
 Some features from 1.x have not been brought to 2.0 yet.
-
-### Attribute Read-Modify-Write
-
-NOTE: the R/M/W from LiveResource 1 is not currently supported in
-LiveResource 2. It will be added soon, with enhancements for modifying
-multiple attributes in one atomic operation.
 
 ### Attribute Publish/Subscribe
 

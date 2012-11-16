@@ -177,7 +177,7 @@ module LiveResource
     end
 
     def deserialize(value)
-      raise "Cannot deserialize nil value" if value.nil?
+      return nil if value.nil?
 
       result = YAML::load(value)
 

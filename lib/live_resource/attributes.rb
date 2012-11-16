@@ -24,33 +24,54 @@ module LiveResource
       redis.attribute_write(key, value, options)
     end
 
-    def remote_modify(*attributes, &block)
-# TODO: support single attribute or list of attributes
-#
-#       unless methods.map { |m| m.to_sym }.include?(attribute.to_sym)
-#         raise ArgumentError.new("remote_modify: no such attribute '#{attribute}'")
-#       end
-#
-#       unless block
-#         raise ArgumentError.new("remote_modify requires a block")
-#       end
-#
-#       # Optimistic locking implemented along the lines of:
-#       #   http://redis.io/topics/transactions
-#       loop do
-#         # Watch/get the value
-#         redis_space.attribute_watch(attribute)
-#         v = redis_space.attribute_get(attribute)
-#
-#         # Block modifies the value
-#         v = block.call(v)
-#
-#         # Set to new value; if ok, we're done. Otherwise we'll loop and
-#         # try again with the new value.
-#         redis_space.multi
-#         redis_space.attribute_set(attribute, v)
-#         break if redis_space.exec
-#       end
+    # Write a new value to an attribute if it doesn't exist yet.
+    def remote_attribute_writenx(key, value)
+      remote_attribute_write(key, value, no_overwrite: true)
+    end
+
+    # Modify an attribute or set of attributes based on the current value(s).
+    # Uses the optimistic locking mechanism provided by Redis WATCH/MULTI/EXEC
+    # transactions.
+    #
+    # The user passes in the a block which will be used to update the attribute(s).
+    # Since the block may need to be replayed, the user should not update any
+    # external state that relies on the block executing only once.
+    def remote_attribute_modify(*attributes, &block)
+      invalid_attrs = attributes - redis.registered_attributes
+      unless invalid_attrs.empty?
+        raise ArgumentError.new("remote_modify: no such attribute(s) '#{invalid_attrs}'")
+      end
+
+      unless block
+        raise ArgumentError.new("remote_modify requires a block")
+      end
+
+      # Optimistic locking implemented along the lines of:
+      #   http://redis.io/topics/transactions
+      loop do
+        # Gather up the attributes and their new values
+        mods = attributes.map do |a|
+          # Watch/get the value
+          redis.attribute_watch(a)
+          v = redis.attribute_read(a)
+
+          # Block modifies the value
+          v = block.call(a, v)
+          [a, v]
+        end
+
+        # Start the transaction
+        redis.multi
+
+        mods.each do |mod|
+          # Set to new value; if ok, we're done.
+          redis.attribute_write(mod[0], mod[1])
+        end
+
+        # Attempt to execute the transaction. Otherwise we'll loop and
+        # try again with the new value.
+        break if redis.exec
+      end
     end
   end
 end
