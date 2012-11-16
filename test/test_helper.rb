@@ -31,4 +31,8 @@ class TestEventWaiter
     end
     event
   end
+
+  def empty?
+    @q.empty?
+  end
 end

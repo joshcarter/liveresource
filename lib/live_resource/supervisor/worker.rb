@@ -213,6 +213,9 @@ module LiveResource
         @resource = resource
         @thread = nil
 
+        defaults = { name_filter: /^.*$/ }
+        options.merge!(defaults) { |key, v1, v2| v1 }
+
         name = ResourceWorker.worker_name(resource.resource_class, resource.resource_name)
         super(name, options, *callbacks)
       end
@@ -257,6 +260,10 @@ module LiveResource
 
       def redis
         @resource.redis
+      end
+
+      def name_filter
+        options[:name_filter]
       end
 
       def self.worker_name(resource_class, resource_name)

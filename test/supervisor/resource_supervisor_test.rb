@@ -50,7 +50,7 @@ class ResourceSupervisorTest < Test::Unit::TestCase
 
     rs = @ts.resource_supervisor
 
-    # Wait up to 5 seconds for workers to start
+    # Wait up to 5 seconds for class resource to start
     assert_equal :started, @ew.wait_for_event(5)
     assert rs.running_workers?
 
@@ -59,7 +59,7 @@ class ResourceSupervisorTest < Test::Unit::TestCase
 
     @ts.stop
 
-    # Wait for up to 5 seconds for the workers to stop
+    # Wait for up to 5 seconds for class resource to stop
     assert_equal :stopped, @ew.wait_for_event(5)
     assert !rs.running_workers?
 
@@ -77,7 +77,7 @@ class ResourceSupervisorTest < Test::Unit::TestCase
 
     rs = @ts.resource_supervisor
 
-    # Wait up to 5 seconds for workers to start
+    # Wait up to 5 seconds for class resource to start
     assert_equal :started, @ew.wait_for_event(5)
     assert rs.running_workers?
 
@@ -98,5 +98,51 @@ class ResourceSupervisorTest < Test::Unit::TestCase
     # No proxies available anymore
     assert_nil LiveResource::find(:test1)
     assert_nil LiveResource::find(:test1, :foo)
+  end
+
+  def test_resource_name_filter
+    # Only monitor resources whose names match the regex given by the name_filter option.
+    @ts.supervise_resource(Test1, name_filter: /^f.*/)  do |on|
+      on.started { |worker| @ew.send_event :started }
+      on.stopped { |worker| @ew.send_event :stopped }
+    end
+
+    @ts.run
+
+    rs = @ts.resource_supervisor
+
+    # Wait up to 5 seconds for class resource to start
+    assert_equal :started, @ew.wait_for_event(5)
+
+    # Create a new instance with a name that matches the filter.
+    cr = LiveResource::find(:test1)
+    cr.new("foo")
+
+    # Should get started events when the new instance starts
+    assert_equal :started, @ew.wait_for_event(5)
+
+    # Make sure we can find the instance
+    assert_not_nil LiveResource::find(:test1, :foo)
+
+    # The resource supervisor should have workers for the class/instance resources
+    rs = @ts.resource_supervisor
+    assert_equal 2, rs.num_workers
+
+    # Create an instance which doesn't match the name filter.
+    cr.new("bar")
+
+    # Should be no pending events
+    assert_equal true, @ew.empty?
+
+    # Should be no proxy
+    assert_nil LiveResource::find(:test1, :bar)
+
+    # Resource supervisor should still only have 2 workers.
+    assert_equal 2, rs.num_workers
+
+    @ts.stop
+
+    # Class and instance should stop
+    2.times { assert_equal :stopped, @ew.wait_for_event(5) }
   end
 end

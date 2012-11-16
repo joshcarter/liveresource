@@ -58,13 +58,19 @@ module LiveResource
         instances = class_worker.redis.registered_instances
 
         instances.each do |i|
-          # Is there already a worker for this instance?
           name = ResourceWorker.worker_name(class_worker.resource_name, i)
+
+          # Is there already a worker for this instance?
           next if @workers.find_by_name(name)
 
-          # Add the instance.
+          # Add the instance. This will cause the resource to be registered
+          # in LiveResource but will not start it.
           init_params = class_worker.redis.instance_params(class_worker.resource_name, i)
           resource = class_worker.resource.new(*init_params)
+
+          # Don't add worker if it doesn't match our name filter.
+          next unless resource.resource_name.match(class_worker.name_filter)
+
           add_resource_worker(resource, class_worker.options)
         end
       end
