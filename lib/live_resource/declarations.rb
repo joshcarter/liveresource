@@ -13,9 +13,13 @@ module LiveResource
       attr = self.class.resource_name_attr
 
       if attr
-        @_cached_resource_name = self.send(attr)
+        begin 
+          @_cached_resource_name = self.send(attr)
+        rescue SystemStackError
+          raise "can't get resource name for #{self.class.to_s} (resource name can't depend on reading remote attribute)"
+        end
       else
-        raise "can't get resource name for #{self.class.to_s}"
+        raise "can't get resource name for #{self.class.to_s} (missing resource name attribute)"
       end
     end
 
