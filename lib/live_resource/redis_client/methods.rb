@@ -107,6 +107,7 @@ module LiveResource
     def method_wait_for_result(method, timeout)
       token = method.token
       result = nil
+      list = nil
 
       begin
         list, result = brpop result_details(token), timeout

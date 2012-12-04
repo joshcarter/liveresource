@@ -8,6 +8,7 @@ task :default => [:test]
 
 Rake::TestTask.new :test do |test|
   test.verbose = false
+  test.warning = true
   test.test_files = ['test/*_test.rb'].sort
 end
 

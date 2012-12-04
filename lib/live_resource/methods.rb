@@ -8,6 +8,8 @@ module LiveResource
     # resource will be visible to finders (.all(), etc.)
     # and remote methods may be called.
     def start
+      @dispatcher ||= nil
+
       if @dispatcher
         @dispatcher.start
       else

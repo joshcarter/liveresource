@@ -6,6 +6,7 @@ module LiveResource
       # Getting resource name may be expensive, e.g. if it's coming
       # from Redis. Cache so we don't re-fectch this resource's name
       # more than once.
+      @_cached_resource_name ||= nil
       return @_cached_resource_name if @_cached_resource_name
 
       # Class-level resource_name is an attribute we fetch to determine
