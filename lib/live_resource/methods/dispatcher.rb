@@ -165,7 +165,7 @@ module LiveResource
     def is_exit_token(token)
       # Exit tokens are strings which can be search with a regular expresion.
       return false unless token.respond_to? :match
-      token.match /^#{EXIT_PREFIX}/
+      token.match(/^#{EXIT_PREFIX}/)
     end
   end
 end

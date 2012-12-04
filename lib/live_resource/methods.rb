@@ -22,6 +22,8 @@ module LiveResource
         raise RuntimeError, "Resource must be registerd before it can be started."
       end
 
+      @dispatcher ||= nil
+
       if @dispatcher
         @dispatcher.start
       else
