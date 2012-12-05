@@ -81,8 +81,8 @@ module LiveResource
       instances = hgetall(key)
 
       unless instances.nil?
-        instances.each_key do |key|
-          names << key
+        instances.each_key do |k|
+          names << k
         end
       end
 

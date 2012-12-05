@@ -84,7 +84,7 @@ module LiveResource
         @instance_monitors[channel] = Thread.new do
           subscribed_client = RedisClient.redis.clone
           subscribed_client.subscribe(channel) do |on|
-            on.message do |channel, msg|
+            on.message do |c, msg|
               # TODO: Better messages. Use instance name to make this 
               # more efficient.
               add_missing_instances(worker) if msg.include? "created"

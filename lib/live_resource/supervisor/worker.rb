@@ -48,8 +48,6 @@ module LiveResource
       attr_reader :options
       attr_reader :start_count
       attr_reader :start_time
-      attr_reader :client_callback
-      attr_reader :internal_callback
 
       def initialize(name, options={})
         defaults = { restart_limit: 5, suspend_period: 120 }
@@ -317,9 +315,13 @@ module LiveResource
       # O(n).
       def find(&block)
         raise ArgumentError, "Block expected" unless block_given?
+
+        name = nil
+        worker = nil
+
         @mutex.synchronize do
-          name, worker = @workers.find do |name, worker|
-            yield worker
+          name, worker = @workers.find do |n, w|
+            yield w
           end
           worker
         end

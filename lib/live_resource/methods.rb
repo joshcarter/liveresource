@@ -10,7 +10,7 @@ module LiveResource
     def register(*instance_init_params)
       return self if redis.registered?
 
-      redis.register self, instance_init_params
+      redis.register(self, *instance_init_params)
       self
     end
 
@@ -35,6 +35,8 @@ module LiveResource
     end
 
     def stop
+      @dispatcher ||= nil
+
       return if @dispatcher.nil?
 
       @dispatcher.stop

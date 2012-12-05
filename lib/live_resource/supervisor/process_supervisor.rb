@@ -54,7 +54,7 @@ module LiveResource
 
           # Check to see if any processes have died.
           begin
-            pid = Process.waitpid -1, Process::WUNTRACED
+            pid = Process.waitpid(-1, Process::WUNTRACED)
           rescue SystemCallError
             # No more children?
             pid = nil

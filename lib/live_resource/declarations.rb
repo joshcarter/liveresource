@@ -43,14 +43,14 @@ module LiveResource
             # is the responsibility of the resource supervisor to
             # start supervised resources.
             
-            if supervised
+            if supervised?
               # Register in Redis but do not put this object in the
               # list of registered resources (the relevant supervisor
               # will do that).
-              resource.register *params
+              resource.register params
             else
               LiveResource::register resource, *params
-              resource.start unless supervised
+              resource.start unless supervised?
             end
             resource
           end
@@ -61,7 +61,7 @@ module LiveResource
         @_supervised = true
       end
 
-      def supervised
+      def supervised?
         @_supervised ||= false
         @_supervised
       end
@@ -222,10 +222,6 @@ module LiveResource
       def singleton_method_added(m)
         @_singleton_methods ||= Set.new
         @_singleton_methods << m
-      end
-
-      def supervise
-        @_supervised = true
       end
     end
   end

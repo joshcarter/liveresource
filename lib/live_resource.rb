@@ -16,7 +16,7 @@ module LiveResource
     @@resources ||= Set.new
     @@resources << resource
 
-    resource.register *instance_init_params
+    resource.register instance_init_params
   end
 
   # Unregister the resource, removing it from discovery and stopping
