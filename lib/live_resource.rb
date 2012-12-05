@@ -25,8 +25,6 @@ module LiveResource
   #
   # @param resource [LiveResource::Resource] the object to unregister
   def self.unregister(resource)
-    # puts "unregistering #{resource.to_s}"
-
     resource.stop
 
     @@resources.delete resource
@@ -46,6 +44,13 @@ module LiveResource
   def self.stop
     @@resources.each do |resource|
       resource.stop
+    end
+  end
+
+  # Stop and unregister all resources
+  def self.shutdown
+    @@resources.each do |r|
+      self.unregister r
     end
   end
 
