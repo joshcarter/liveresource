@@ -34,7 +34,7 @@ end
 gem_spec = Gem::Specification.new do |spec|
   spec.name = 'liveresource'
   spec.summary = 'Live Resource'
-  spec.version = '2.0.0'
+  spec.version = '2.1.0'
   spec.author = 'Spectra Logic'
 	spec.email = 'public@joshcarter.com'
 	spec.homepage = 'https://github.com/joshcarter/liveresource'
