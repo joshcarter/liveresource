@@ -52,7 +52,7 @@ class TestClass < Test::Unit::TestCase
     LiveResource::RedisClient.logger.level = Logger::INFO
 
     # Class resources
-    LiveResource::register Class1
+    LiveResource::register(Class1).start
   end
 
   def teardown

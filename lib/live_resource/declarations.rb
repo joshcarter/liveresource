@@ -32,15 +32,38 @@ module LiveResource
       def self.extended(base)
         class << base
           # Override the regular new routine with a custom new
-          # which auto-registers the resource.
+          # which auto-registers and starts the resource.
           alias :ruby_new :new
 
           def new(*params)
-            obj = ruby_new(*params)
-            LiveResource::register obj
-            obj
+            resource = ruby_new(*params)
+
+            # Resources always auto-regiser themselves. However,
+            # only unsupervised resources start on their own. It
+            # is the responsibility of the resource supervisor to
+            # start supervised resources.
+            
+            if supervised?
+              # Register in Redis but do not put this object in the
+              # list of registered resources (the relevant supervisor
+              # will do that).
+              resource.register params
+            else
+              LiveResource::register resource, *params
+              resource.start unless supervised?
+            end
+            resource
           end
         end
+      end
+
+      def supervise
+        @_supervised = true
+      end
+
+      def supervised?
+        @_supervised ||= false
+        @_supervised
       end
 
       # FIXME: comment this

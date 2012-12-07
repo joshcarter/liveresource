@@ -1,7 +1,7 @@
 module LiveResource
   class RedisClient
     def remote_attributes_key
-      if @redis_class == "class"
+      if is_class?
         "#{@redis_name}.class_attributes"
       else
         "#{@redis_class}.attributes"
