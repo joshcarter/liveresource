@@ -1,4 +1,5 @@
 require 'set'
+require 'monitor'
 
 module LiveResource
   module Declarations
@@ -6,22 +7,9 @@ module LiveResource
       # Getting resource name may be expensive, e.g. if it's coming
       # from Redis. Cache so we don't re-fectch this resource's name
       # more than once.
-      @_cached_resource_name ||= nil
-      return @_cached_resource_name if @_cached_resource_name
+      return @_cached_resource_name if defined? @_cached_resource_name
 
-      # Class-level resource_name is an attribute we fetch to determine
-      # the instance's name
-      attr = self.class.resource_name_attr
-
-      if attr
-        begin 
-          @_cached_resource_name = self.send(attr)
-        rescue SystemStackError
-          raise "can't get resource name for #{self.class.to_s} (resource name can't depend on reading remote attribute)"
-        end
-      else
-        raise "can't get resource name for #{self.class.to_s} (missing resource name attribute)"
-      end
+      @_cached_resource_name = get_resource_name
     end
 
     def resource_class
@@ -223,6 +211,45 @@ module LiveResource
         @_singleton_methods ||= Set.new
         @_singleton_methods << m
       end
+    end
+
+    private
+
+    # Internal use only.
+    #
+    # When we get the resource name for the first time, we need to detect the case where the user
+    # has erroneously defined the name such that it requires reading a remote attribute. Since
+    # reading a remote attribute itself requires the name, we will find ourselves in an infinite
+    # recursion loop.
+    #
+    # We detect this by remembering if a thread is attempting to get a particular resource name
+    # already.
+    @@_getting_name = Hash.new.extend(MonitorMixin)
+
+    def get_name_key
+      "#{self.object_id}.#{Thread.current}"
+    end
+
+    def get_resource_name
+      @@_getting_name.synchronize do
+        if @@_getting_name[get_name_key]
+          raise "can't get resource name for #{self.class.to_s} (resource name can't depend on reading remote attribute)"
+        end
+        @@_getting_name[get_name_key] = true
+      end
+
+      # Class-level resource_name is an attribute we fetch to determine
+      # the instance's name
+      attr = self.class.resource_name_attr
+
+      if attr
+        name = self.send(attr)
+      else
+        raise "can't get resource name for #{self.class.to_s} (missing resource name attribute)"
+      end
+
+      @@_getting_name.synchronize { @@_getting_name.delete get_name_key }
+      name
     end
   end
 end
