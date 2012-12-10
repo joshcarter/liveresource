@@ -33,6 +33,10 @@ module LiveResource
       end
     end
 
+    def LiveResource.find_all(resource_class, &block)
+      LiveResource::all(resource_class).find_all(&block)
+    end
+
     def LiveResource.any(resource_class)
       resources = all(resource_class)
 
