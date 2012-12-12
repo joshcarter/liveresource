@@ -26,8 +26,8 @@ class ClassMethodTest < Test::Unit::TestCase
   def setup
     Redis.new.flushall
 
-    LiveResource::register Class1
-    LiveResource::register Class2
+    LiveResource::register(Class1).start
+    LiveResource::register(Class2).start
   end
 
   def teardown

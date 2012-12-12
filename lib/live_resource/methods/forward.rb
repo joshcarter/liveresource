@@ -1,5 +1,3 @@
-require_relative 'method'
-
 module LiveResource
   class RemoteMethodForward
     attr_reader :resource, :method, :params, :next

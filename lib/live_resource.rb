@@ -1,4 +1,5 @@
 require_relative 'live_resource/resource'
+require_relative 'live_resource/supervisor'
 require 'set'
 
 # LiveResource is a framework for coordinating processes and status
@@ -7,18 +8,15 @@ require 'set'
 # LiveResource::Finders for discovering resources, and
 # LiveResource::ResourceProxy for using resources.
 module LiveResource
-  # Register the resource, allowing its discovery and methods to be
-  # called on it. This method will block until the resource is fully
-  # registered and its method dispatcher is running.
+  # Register the resource. Note that the resource must first be started
+  # before it can be discovered and methods can be called on it.
   #
   # @param resource [LiveResource::Resource] the object to register
-  def self.register(resource)
-    # puts "registering #{resource.to_s}"
-
+  def self.register(resource, *instance_init_params)
     @@resources ||= Set.new
     @@resources << resource
 
-    resource.start
+    resource.register instance_init_params
   end
 
   # Unregister the resource, removing it from discovery and stopping
@@ -27,8 +25,6 @@ module LiveResource
   #
   # @param resource [LiveResource::Resource] the object to unregister
   def self.unregister(resource)
-    # puts "unregistering #{resource.to_s}"
-
     resource.stop
 
     @@resources.delete resource
@@ -48,6 +44,13 @@ module LiveResource
   def self.stop
     @@resources.each do |resource|
       resource.stop
+    end
+  end
+
+  # Stop and unregister all resources
+  def self.shutdown
+    @@resources.each do |r|
+      self.unregister r
     end
   end
 

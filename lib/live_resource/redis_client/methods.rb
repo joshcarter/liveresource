@@ -3,7 +3,7 @@ require 'yaml'
 module LiveResource
   class RedisClient
     def remote_methods_key
-      if @redis_class == "class"
+      if is_class?
         "#{@redis_name}.class_methods"
       else
         "#{@redis_class}.methods"
@@ -107,6 +107,7 @@ module LiveResource
     def method_wait_for_result(method, timeout)
       token = method.token
       result = nil
+      list = nil
 
       begin
         list, result = brpop result_details(token), timeout

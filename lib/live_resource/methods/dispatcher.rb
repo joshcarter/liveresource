@@ -47,13 +47,8 @@ module LiveResource
     def run
       info("#{self} method dispatcher starting")
 
-      # Register methods and attributes used by this resource class
-      redis.register_methods @resource.remote_methods
-      redis.register_attributes @resource.remote_attributes
-
-      # Need to register our class and instance in Redis so the finders
-      # (all, any, etc.) will work.
-      redis.register
+      # Need to start our instance so it can be found by the finders.
+      redis.start_instance
 
       @running = true
 
@@ -119,7 +114,7 @@ module LiveResource
         # NOTE: if this process crashes outright, or we lose network
         # connection to Redis, or whatever -- this decrement won't occur.
         # Supervisor should clean up where possible.
-        redis.unregister
+        redis.stop_instance
 
         info("#{self} method dispatcher exiting")
 
@@ -170,7 +165,7 @@ module LiveResource
     def is_exit_token(token)
       # Exit tokens are strings which can be search with a regular expresion.
       return false unless token.respond_to? :match
-      token.match /^#{EXIT_PREFIX}/
+      token.match(/^#{EXIT_PREFIX}/)
     end
   end
 end

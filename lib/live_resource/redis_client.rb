@@ -96,5 +96,9 @@ module LiveResource
       debug "<<", response
       response
     end
+
+    def is_class?
+      @redis_class == "class"
+    end
   end
 end

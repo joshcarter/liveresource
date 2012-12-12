@@ -3,6 +3,7 @@ require 'logger'
 module LiveResource
   module LogHelper
     def logger
+      @logger ||= nil
       if @logger.nil?
         @logger = Logger.new(STDERR)
         @logger.level = Logger::WARN
