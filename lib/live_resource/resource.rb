@@ -40,5 +40,12 @@ module LiveResource
     def forward(resource, method, *params)
       LiveResource::RemoteMethodForward.new(resource, method, params)
     end
+    
+    # Create proxy describing this resource. Generally only used by the
+    # resource itself; clients should use the finders (find, all, etc.)
+    # instead.
+    def to_proxy
+      ResourceProxy.new(redis.redis_class, redis.redis_name)
+    end
   end
 end

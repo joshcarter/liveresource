@@ -72,10 +72,8 @@ module LiveResource
             result = validate_method(method).call(*method.params)
 
             if result.is_a? Resource
-              # Return descriptor of a resource proxy instead
-              result = ResourceProxy.new(
-                result.redis.redis_class,
-                result.redis.redis_name)
+              # Return a resource proxy instead
+              result = result.to_proxy
             elsif result.is_a? RemoteMethodForward
               # Append forwarding instructions to current method
               method.forward_to result

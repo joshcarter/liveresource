@@ -34,6 +34,17 @@ class ParamsTest < Test::Unit::TestCase
       end
       result
     end
+    
+    def should_get_a_proxy(proxy_param)
+      return proxy_param.is_a? LiveResource::ResourceProxy
+    end
+  end
+
+  class MyResource
+    include LiveResource::Resource
+    
+    resource_class :my_resource
+    resource_name :object_id
   end
 
   def setup
@@ -77,5 +88,13 @@ class ParamsTest < Test::Unit::TestCase
 
     assert_raise(ArgumentError) { @test_instance.mixed_params_method }
     assert_raise(ArgumentError) { @test_instance.mixed_params_method(1) }
+  end
+  
+  def test_resources_serialized_as_proxies
+    r = MyResource.new
+    
+    # When resources are passed as method params, they should get 
+    # serialized as resource proxies instead.
+    assert_equal true, @test_instance.should_get_a_proxy(r.to_proxy)
   end
 end
