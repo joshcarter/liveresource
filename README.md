@@ -233,7 +233,7 @@ LiveResource will try to connect to Redis at `localhost` and its
 default port, 6379. If you need to change that, or any other client
 parameters, just assign a new Redis client.
 
-    LiveResource::RedisClient.redis = Redis.new(hostname: 'machine-c.local')
+    LiveResource::RedisClient.redis = Redis.new(host: 'machine-c.local')
 
 ## Missing LiveResource 1.x Features
 
