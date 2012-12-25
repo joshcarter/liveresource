@@ -10,6 +10,7 @@ module LiveResource
   # LiveResource finder methods (all, find, etc).
   class ResourceProxy
     include LiveResource::LogHelper
+    include LiveResource::ErrorHelper
 
     attr_reader :redis_class, :redis_name
 
@@ -99,7 +100,8 @@ module LiveResource
         # result.set_backtrace trace
 
         result.set_backtrace result.backtrace
-        raise result
+
+        tag_errors(LiveResource::ResourceApiError) { raise result }
       else
         result
       end

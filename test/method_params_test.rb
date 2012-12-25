@@ -66,6 +66,9 @@ class ParamsTest < Test::Unit::TestCase
   def test_no_params_method
     assert_equal 42, @test_instance.no_params_method
     assert_raise(ArgumentError) { @test_instance.no_params_method("foo") }
+
+    # Should also match ResourceApiError
+    assert_raise(LiveResource::ResourceApiError) { @test_instance.no_params_method("foo") }
   end
 
   def test_fixed_params_method

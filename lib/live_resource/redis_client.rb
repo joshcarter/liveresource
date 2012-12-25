@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'redis'
 require 'yaml'
+require_relative 'error'
 require_relative 'log_helper'
 require_relative 'redis_client/attributes'
 require_relative 'redis_client/methods'
@@ -22,6 +23,7 @@ end
 module LiveResource
   class RedisClient
     include LogHelper
+    include ErrorHelper
     attr_writer :redis
     attr_reader :redis_class, :redis_name
 
@@ -91,10 +93,12 @@ module LiveResource
     private
 
     def redis_command(method, params, &block)
-      debug ">>", method.to_s, *params
-      response = self.class.redis.send(method, *params, &block)
-      debug "<<", response
-      response
+      tag_errors(LiveResource::RedisError) do
+        debug ">>", method.to_s, *params
+        response = self.class.redis.send(method, *params, &block)
+        debug "<<", response
+        response
+      end
     end
 
     def is_class?

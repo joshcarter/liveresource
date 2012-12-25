@@ -249,6 +249,10 @@ be dropped.
 
 (This section is my to-do list for future versions of LiveResource. -jdc)
 
+* Auto-discovery of Redis server, probably via DNS-SD and ActiveService gem.
+
+* "rake test" should use alternate Redis DB, not default.
+
 * More formally specify and test edge-case behaviors, for example:
 
   - Getting/setting attributes that don't exist.
@@ -261,7 +265,13 @@ be dropped.
 
   - Serialize exceptions in a less Ruby-specific manner.
 
-  - Merge exception backtrace properly. (ResourceProxy#wait_for_done)
+  - Merge exception backtrace properly. (`ResourceProxy#wait_for_done`)
+  
+  - LiveResource should tag exceptions with a LR-specific module that 
+    clients can catch in case they want to tell, for example, a LR
+    argument error vs. a pure-ruby arg error.
+    
+  - Policy around network timeout and retries.
 
 * Benchmarking: try multiple redis clients
 

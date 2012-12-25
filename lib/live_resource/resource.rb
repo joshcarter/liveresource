@@ -1,3 +1,4 @@
+require_relative 'error'
 require_relative 'log_helper'
 require_relative 'declarations'
 require_relative 'finders'
@@ -13,6 +14,7 @@ module LiveResource
   # callable.
   module Resource
     include LiveResource::LogHelper
+    include LiveResource::ErrorHelper
     include LiveResource::Declarations
     include LiveResource::Finders
     include LiveResource::Attributes
