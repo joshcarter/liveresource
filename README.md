@@ -265,14 +265,8 @@ be dropped.
 
   - Serialize exceptions in a less Ruby-specific manner.
 
-  - Merge exception backtrace properly. (`ResourceProxy#wait_for_done`)
-  
-  - LiveResource should tag exceptions with a LR-specific module that 
-    clients can catch in case they want to tell, for example, a LR
-    argument error vs. a pure-ruby arg error.
-    
   - Policy around network timeout and retries.
-
+  
 * Benchmarking: try multiple redis clients
 
 * Tools/Debugging:
@@ -282,6 +276,8 @@ be dropped.
   - Logging: allow runtime logging level changes (possibly via built-in remote method)
 
   - Logging: syslog setup
+
+  - Optional audit log for workers.
 
 * Finish rdoc, test to make sure it looks right.
 

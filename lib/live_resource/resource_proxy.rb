@@ -96,10 +96,8 @@ module LiveResource
         # Merge the backtrace from the passed exception with this
         # stack trace so the final backtrace looks like the method_sender
         # called the method_provider directly.
-        # trace = merge_backtrace caller, result.backtrace
-        # result.set_backtrace trace
-
-        result.set_backtrace result.backtrace
+        trace = merge_backtrace caller, result.backtrace
+        result.set_backtrace trace
 
         tag_errors(LiveResource::ResourceApiError) { raise result }
       else
@@ -154,7 +152,7 @@ module LiveResource
 
       # Find the first live resource stack trace
       index = provider_trace.index do |t|
-        t =~ /lib\/live_resource\/method_provider/  ## FIXME
+        t =~ /lib\/live_resource\/methods\/dispatcher/
       end
 
       # Slice off everything starting at that index
@@ -162,12 +160,12 @@ module LiveResource
 
       # Add a trace that indicates that live resource was used
       # to link the sender to the provider.
-      result << 'via LiveResource'
+      result << '<< via LiveResource remote method call >>'
 
-      # For the sender trace, remove the 'method_sendor'
+      # For the sender trace, remove the ResourceProxy
       # part of the trace.
       index = sender_trace.index do |t| 
-        t =~ /lib\/live_resource\/method_sender/   ## FIXME
+        t =~ /lib\/live_resource\/resource_proxy/
       end
       result += sender_trace[(index + 1) .. (sender_trace.length - 1)]
 
