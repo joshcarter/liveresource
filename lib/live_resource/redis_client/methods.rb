@@ -169,9 +169,13 @@ module LiveResource
 
     def serialize(value)
       if value.is_a? Exception
-        # YAML can't dump an exception properly, it loses the message.
-        # and the backtrace.  Save those separately as strings.
-        YAML::dump [value, value.message, value.backtrace]
+        # YAML can't (un)parse an exception properly.  It looses the backtrace
+        # and can sometimes cause errors trying to unparse a YAML'ized
+        # version of the excepion object itself.
+        #
+        # Save those separately as strings in such a way that the other end
+        # knows we're manually sending an exception over.
+        YAML::dump ['Exception', value.class.name, value.message, value.backtrace]
       else
         YAML::dump value
       end
@@ -182,10 +186,11 @@ module LiveResource
 
       result = YAML::load(value)
 
-      if result.is_a?(Array) and result[0].is_a?(Exception)
+      if result.is_a?(Array) and result[0] == 'Exception' and result.length == 4
         # Inverse of what serialize() is doing with exceptions.
-        e = result[0].class.new(result[1])
-        e.set_backtrace result[2]
+        exception_class = Object::const_get(result[1])
+        e = exception_class.new(result[2]) 
+        e.set_backtrace result[3]
         result = e
       end
 

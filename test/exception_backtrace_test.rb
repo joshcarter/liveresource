@@ -14,7 +14,10 @@ class ExceptionBacktraceTest < Test::Unit::TestCase
     private
     
     def resource_method_2(param)
-      raise "failure"
+      # Specifically raise a name error as that is an excemple of one that
+      # has been known to cause problems round-tripping through YAML, causing
+      # an "allocator undefined for NameError::message" exception.
+      raise_a_name_error
     end
   end
 
