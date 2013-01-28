@@ -16,6 +16,22 @@ module LiveResource
       self.class.instance_variable_get(:@_resource_class)
     end
 
+    # Execute the resource start callback (if it has been defined).
+    def on_resource_start
+      if self.class.instance_variable_defined? :@_resource_start_cb
+        callback = self.class.instance_variable_get(:@_resource_start_cb)
+        self.send(callback) if callback
+      end
+    end
+
+    # Execute the resource stop callback (if it has been defined).
+    def on_resource_stop
+      if self.class.instance_variable_defined? :@_resource_stop_cb
+        callback = self.class.instance_variable_get(:@_resource_stop_cb)
+        self.send(callback) if callback
+      end
+    end
+
     module ClassMethods
       def self.extended(base)
         class << base
@@ -73,6 +89,28 @@ module LiveResource
         else
           # Get the class-level resource class, which we'll always call :class.
           :class
+        end
+      end
+
+      # call-seq:
+      #   on_resource_start :callback
+      #
+      # Delcare a resource start callback. This callback will be executed
+      # at the time any instance of this resource starts its method dispatcher.
+      def on_resource_start(callback=nil)
+        if callback
+          @_resource_start_cb = callback.to_sym
+        end
+      end
+
+      # call-seq:
+      #   on_resource_stop :callback
+      #
+      # Delcare a resource stop callback. This callback will be executed
+      # at the time any instance of this resource stops its method dispatcher.
+      def on_resource_stop(callback=nil)
+        if callback
+          @_resource_stop_cb = callback.to_sym
         end
       end
 

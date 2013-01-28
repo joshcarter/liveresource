@@ -227,6 +227,57 @@ conventions.
 TODO: needs documentation. In the meantime, refer to
 `test/method_forward_continue_test.rb`.
 
+## Resource start/stop callbacks
+
+As noted above, when a new instance of a resource is created, the remote method mechanism
+is automatically started. What if, however, you want to perform some other processing at the
+time of start-up? Normally, you'd add such processing to the resource constructor. However, due
+to certain details of LiveResource internals, we recommend using resource start/stop callbacks.
+Additionally, this guarantees this code will run each time you start/stop the resource remote
+method mechanism for a particular instance.
+
+    class Worker
+      include LiveResource::Resource
+
+      resource_class :worker
+      resource_name :name
+
+      remote_reader :name
+
+      # Define resource start/stop callbacks
+      on_resource_start :start_work
+      on_resource_stop :stop_work
+
+      def initialize(name)
+        remote_attribute_write(:name, name)
+      end
+
+      def get_results
+        # ...Gather current results from background process...
+      end
+      
+      private
+
+      # Make start/stop callbacks private so they won't be remote-callable
+      def start_work
+        # start some background processing
+        @run_thread = Thread.new do
+          # ...Do some magic processing...
+        end
+      end
+
+      def stop_work
+        return unless @run_thread
+        @run_thread.exit
+        @run_thread.join
+        @run_thread = nil
+      end
+    end
+
+LiveResource guarantees that the start callback will be executed before the
+instance receives any remote method calls and that no remote method calls
+will be received after the stop callback has exectued.
+
 ## Configuring the Redis Client
 
 LiveResource will try to connect to Redis at `localhost` and its

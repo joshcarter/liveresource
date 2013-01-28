@@ -22,9 +22,9 @@ module LiveResource
         raise RuntimeError, "Resource must be registerd before it can be started."
       end
 
-      @dispatcher ||= nil
+      on_resource_start
 
-      if @dispatcher
+      if defined? @dispatcher and @dispatcher
         @dispatcher.start
       else
         @dispatcher = RemoteMethodDispatcher.new(self)
@@ -40,6 +40,7 @@ module LiveResource
       return if @dispatcher.nil?
 
       @dispatcher.stop
+      on_resource_stop
       self
     end
 
