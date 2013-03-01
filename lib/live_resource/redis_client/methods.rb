@@ -188,13 +188,25 @@ module LiveResource
 
       if result.is_a?(Array) and result[0] == 'Exception' and result.length == 4
         # Inverse of what serialize() is doing with exceptions.
-        exception_class = Object::const_get(result[1])
+        exception_class = get_exception(result[1])
         e = exception_class.new(result[2]) 
         e.set_backtrace result[3]
         result = e
       end
 
       result
+    end
+
+    # Get the exception class that matches the given string, while taking
+    # into account exceptions that are namespaced.
+    def get_exception(exception_string)
+      unless exception_string.is_a?(String)
+        raise(ArgumentError, 'exception_string is not a string')
+      end
+
+      exception_string.split('::').inject(Object) do |mod, class_name|
+        mod.const_get(class_name)
+      end
     end
   end
 end
