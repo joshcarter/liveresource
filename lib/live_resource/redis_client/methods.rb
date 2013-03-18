@@ -26,7 +26,18 @@ module LiveResource
       "#{token.redis_class}.#{token.redis_name}.result.#{token.seq}"
     end
 
+    # Synchronize the given methods with what is currently registered in
+    # Redis under the {remote_methods_key} key.  If the key does not exist,
+    # the methods will simply be added.
+    #
+    # This method is meant to be called from a Redis transaction since
+    # more than one command is executed.  Because of that, this method cannot
+    # compare the given methods against what is currently in Redis.
     def register_methods(methods)
+      del remote_methods_key
+
+      # sadd raises an exception when passing an empty array.  Plus,
+      # there's no sense in running an unnecessary Redis command.
       unless methods.empty?
         sadd remote_methods_key, methods
       end

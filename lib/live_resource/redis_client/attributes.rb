@@ -8,7 +8,18 @@ module LiveResource
       end
     end
 
+    # Synchronize the given attributes with what is currently registered in
+    # Redis under the {remote_attributes_key} key.  If the key does not exist,
+    # the attributs will simply be added.
+    #
+    # This method is meant to be called from a Redis transaction since
+    # more than one command is executed.  Because of that, this method cannot
+    # compare the given attributes against what is currently in Redis.
     def register_attributes(attributes)
+      del remote_attributes_key
+
+      # sadd raises an exception when passing an empty array.  Plus,
+      # there's no sense in running an unnecessary Redis command.
       unless attributes.empty?
         sadd remote_attributes_key, attributes
       end

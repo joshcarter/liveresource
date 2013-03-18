@@ -8,8 +8,6 @@ module LiveResource
     # When resources are registered their basic state is placed into Redis,
     # however they may not be used until they have been started.
     def register(*instance_init_params)
-      return self if redis.registered?
-
       redis.register(self, *instance_init_params)
       self
     end
