@@ -49,6 +49,15 @@ module LiveResource
       methods.map { |m| m.to_sym }
     end
 
+    # This method is meant to be called from a Redis transaction since
+    # more than one command is executed.  Because of that, this method cannot
+    # compare the given methods against what is currently in Redis.
+    def unregister_methods
+      del methods_list
+      del methods_in_progress_list
+      del remote_methods_key
+    end
+
     def method_wait
       token = brpoplpush methods_list, methods_in_progress_list, 0
       deserialize(token)

@@ -139,11 +139,11 @@ class RegistrationTest < Test::Unit::TestCase
     # existing instance and the new one.
     Foo.send(:define_method, :new_instance_method) do end
     Foo.remote_reader :new_reader
-    assert_equal [], rbar.registered_methods
+    assert_equal [:delete], rbar.registered_methods
     assert_equal [:name, :name=].to_set, rbar.registered_attributes.to_set
     LiveResource::find(:foo).new('bar')
-    assert_equal [:new_instance_method], r.registered_methods
-    assert_equal [:new_instance_method], rbar.registered_methods
+    assert_equal [:delete, :new_instance_method], r.registered_methods
+    assert_equal [:delete, :new_instance_method], rbar.registered_methods
     assert_equal [:name, :name=, :new_reader].to_set, r.registered_attributes.to_set
     assert_equal [:name, :name=, :new_reader].to_set, rbar.registered_attributes.to_set
 

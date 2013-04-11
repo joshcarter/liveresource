@@ -211,8 +211,8 @@ module LiveResource
 
       # Remote-callable methods for an instance.
       def remote_instance_methods
-        @_instance_methods ||= Set.new
-        @_instance_attributes ||= Set.new
+        @_instance_methods ||= default_instance_methods
+        @_instance_attributes ||= default_instance_attributes
 
         # Remove all instance attributes, then fiter out private and
         # protected methods.
@@ -227,7 +227,7 @@ module LiveResource
 
       # Remote-callable methods for a resource class.
       def remote_singleton_methods
-        @_singleton_methods ||= Set.new
+        @_singleton_methods ||= default_singleton_methods
         c = singleton_class
 
         # Filter out private and protected methods of the singleton class.
@@ -241,13 +241,28 @@ module LiveResource
       end
 
       def method_added(m)
-        @_instance_methods ||= Set.new
+        @_instance_methods ||= default_instance_methods
         @_instance_methods << m
       end
 
       def singleton_method_added(m)
-        @_singleton_methods ||= Set.new
+        @_singleton_methods ||= default_singleton_methods
         @_singleton_methods << m
+      end
+
+      private
+
+      def default_singleton_methods
+        Set.new
+      end
+
+      def default_instance_methods
+        defaults = Set.new
+        defaults << :delete
+      end
+
+      def default_instance_attributes
+        Set.new
       end
     end
 

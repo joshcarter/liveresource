@@ -31,6 +31,20 @@ module LiveResource
       attributes.map { |a| a.to_sym }
     end
 
+    def unregister_attribute(key)
+      del "#{@redis_class}.#{redis_name}.attributes.#{key}"
+    end
+
+    # This method is meant to be called from a Redis transaction since
+    # more than one command is executed.  Because of that, this method cannot
+    # compare the given attributes against what is currently in Redis.
+    def unregister_attributes(attributes)
+      attributes.each do |key|
+        unregister_attribute key
+      end
+      del remote_attributes_key
+    end
+
     def attribute_read(key, options={})
       deserialize(get("#{@redis_class}.#{@redis_name}.attributes.#{key}"))
     end

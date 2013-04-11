@@ -101,6 +101,35 @@ module LiveResource
       publish_event("stopped")
     end
 
+    def delete_instance(resource)
+      loop do
+        puts "deleting?"
+
+        watch remote_methods_key
+        watch remote_attributes_key
+        watch instance_params_key
+        watch instances_key
+
+        # Only unregister if there are no instances
+        if num_instances > 0
+          puts "RUH ROH!"
+          warn("Unable to unregister instance: other copies of this instance still running?")
+          unwatch
+          return
+        end
+
+        multi
+
+        unregister_methods
+        unregister_attributes resource.remote_attributes
+        del instance_params_key
+        hdel instances_key, @redis_name
+
+        break if exec
+      end
+      publish_event("deleted")
+    end
+
     def all
       names = []
 

@@ -25,6 +25,11 @@ module LiveResource
       @remote_attributes = @redis.registered_attributes
     end
 
+    def delete
+      # Delete is always async with no result
+      delete!
+    end
+
     # Proxies attribute and remote method calls to the back-end provider.
     def method_missing(m, *params, &block)
       # Strip trailing ?, ! for seeing if we support method

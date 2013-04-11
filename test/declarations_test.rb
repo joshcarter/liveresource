@@ -70,7 +70,7 @@ class TestClass < Test::Unit::TestCase
   # end
 
   def test_correct_instance_methods
-    assert_equal [:method1], Class1.ruby_new("foo").remote_methods
+    assert_equal [:delete, :method1], Class1.ruby_new("foo").remote_methods
   end
 
   def test_correct_instance_attributes

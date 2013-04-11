@@ -11,6 +11,7 @@ module LiveResource
       @resource = resource
       @thread = nil
       @running = false
+      @deleted = false
 
       start
     end
@@ -26,16 +27,19 @@ module LiveResource
     end
 
     def stop
-      return if @thread.nil?
-
-      redis.method_push exit_token
-      @running = false
-      @thread.join
-      @thread = nil
+      exit_common(stop_token)
     end
 
     def running?
       (@thread != nil) && @running
+    end
+
+    def delete
+      exit_common(delete_token, false)
+    end
+
+    def deleted?
+      @deleted
     end
 
     def wait_for_running
@@ -53,14 +57,25 @@ module LiveResource
       @running = true
 
       begin
+        delete = false
         loop do
           token = redis.method_wait
 
-          if is_exit_token(token)
-            if token == exit_token
+          if is_exit_token?(token)
+            if token == stop_token
               redis.method_done token
               break
+            elsif token == delete_token
+              # Push the delete token back on the queue for any other
+              # instances that might still be running
+              redis.method_done token
+              redis.method_push token
+              delete = true
+              break
             else
+              # Not our exit token, put it back on the method
+              # queue for another resource to handle.
+              redis.method_done token
               redis.method_push token
               next
             end
@@ -114,8 +129,13 @@ module LiveResource
         # Supervisor should clean up where possible.
         redis.stop_instance
 
-        info("#{self} method dispatcher exiting")
+        info("#{self} method dispatcher exiting #{delete ? 'deleting' : 'stopping'}")
 
+        if delete
+          puts "Calling delete instance!"
+          redis.delete_instance @resource
+          @deleted = true
+        end
       end
     end
 
@@ -153,17 +173,42 @@ module LiveResource
       method
     end
 
+    # The dispatcher supports two types of exits: stop and delete.
+    # - Stop simply stops the method dispatcher. The stop token is process/thread-specific.
+    # - Delete stops the method dispatcher and removes the instance the instance from redis. The
+    #   delete token is NOT process/thread-specific
+    # 
+    #   NOTE: only the last currently running instance of a resource peforms the delete, for
+    #   this reason, the delete token is always re-pushed on the method queue to propagate
+    #   to other instances.
     EXIT_PREFIX = 'exit'
+    EXIT_TYPE_STOP = 'stop'
+    EXIT_TYPE_DELETE = 'delete'
 
-    def exit_token
+    def stop_token
       # Construct an exit token for this resource
-      "#{EXIT_PREFIX}.#{Socket.gethostname}.#{Process.pid}.#{@thread.object_id}"
+      "#{EXIT_PREFIX}.#{EXIT_TYPE_STOP}.#{Socket.gethostname}.#{Process.pid}.#{@thread.object_id}"
     end
 
-    def is_exit_token(token)
-      # Exit tokens are strings which can be search with a regular expresion.
+    def delete_token
+      # Construct a delete token for this resource
+      "#{EXIT_PREFIX}.#{EXIT_TYPE_DELETE}"
+    end
+
+    # Check if this token is for an exit command
+    def is_exit_token?(token)
+      # Exit tokens are strings which can be searched with a regular expresion.
       return false unless token.respond_to? :match
       token.match(/^#{EXIT_PREFIX}/)
+    end
+
+    def exit_common(token, wait=true)
+      return if not running?
+      redis.method_push token
+      @running = false
+      return if !wait
+      @thread.join
+      @thread = nil
     end
   end
 end

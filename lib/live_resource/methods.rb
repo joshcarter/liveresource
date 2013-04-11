@@ -33,9 +33,7 @@ module LiveResource
     end
 
     def stop
-      @dispatcher ||= nil
-
-      return if @dispatcher.nil?
+      return if not defined? @dispatcher
 
       @dispatcher.stop
       on_resource_stop
@@ -44,6 +42,17 @@ module LiveResource
 
     def running?
       @dispatcher && @dispatcher.running?
+    end
+
+    def delete
+      return if not defined? @dispatcher
+
+      @dispatcher.delete
+      self
+    end
+
+    def deleted?
+      @dispater && @dispatcher.deleted?
     end
 
     def remote_methods
