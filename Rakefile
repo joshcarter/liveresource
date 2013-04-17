@@ -6,12 +6,21 @@ require 'yard'
 desc "Default Task"
 task :default => [:test]
 
+# Test everything
 Rake::TestTask.new :test do |test|
+  test.verbose = false
+  test.warning = true
+  test.test_files = ['test/*_test.rb', 'test/supervisor/*_test.rb'].sort
+end
+
+# Just do resource tests
+Rake::TestTask.new :resource_test do |test|
   test.verbose = false
   test.warning = true
   test.test_files = ['test/*_test.rb'].sort
 end
 
+# Just do supervisor tests
 Rake::TestTask.new :supervisor_test do |test|
   test.verbose = false
   test.test_files = ['test/supervisor/*_test.rb'].sort
