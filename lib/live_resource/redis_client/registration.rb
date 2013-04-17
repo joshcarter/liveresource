@@ -103,8 +103,6 @@ module LiveResource
 
     def delete_instance(resource)
       loop do
-        puts "deleting?"
-
         watch remote_methods_key
         watch remote_attributes_key
         watch instance_params_key
@@ -112,7 +110,6 @@ module LiveResource
 
         # Only unregister if there are no instances
         if num_instances > 0
-          puts "RUH ROH!"
           warn("Unable to unregister instance: other copies of this instance still running?")
           unwatch
           return

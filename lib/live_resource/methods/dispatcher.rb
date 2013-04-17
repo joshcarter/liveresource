@@ -132,7 +132,6 @@ module LiveResource
         info("#{self} method dispatcher exiting #{delete ? 'deleting' : 'stopping'}")
 
         if delete
-          puts "Calling delete instance!"
           redis.delete_instance @resource
           @deleted = true
         end

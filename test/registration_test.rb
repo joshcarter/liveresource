@@ -175,4 +175,84 @@ class RegistrationTest < Test::Unit::TestCase
     assert_equal 0, r.num_instances
     assert_equal ["foo"], r.instance_params
   end
+
+  def test_delete_instance
+    q = Queue.new
+
+    # Redis client for the instance resource.
+    r = LiveResource::RedisClient.new(:foo, :foo)
+
+    # Start a new thread and subscribe to the instance event channel
+    Thread.new do
+      Redis.new.subscribe(r.instance_channel) do |on|
+        on.subscribe do |channel, msg|
+          q.push "subscribed"
+        end
+        on.message do |channel, msg| 
+          q.push msg
+        end
+      end
+    end
+
+    # Wait for subscribe event.
+    msg = q.pop
+    assert_equal "subscribed", msg
+
+    LiveResource::register(Foo).start
+    LiveResource::find(:foo).new("foo")
+
+    # Ensure we get all created/started events (note we don't know which order we'll get them
+    # in).
+    events = ["class.foo.created", "class.foo.started", "foo.foo.created", "foo.foo.started"]
+    until events.empty?
+      msg = q.pop
+      assert_not_nil events.delete(msg)
+    end
+
+    # Should be one instance of foo
+    assert_equal 1, r.num_instances
+
+    # Create another foo instance
+    LiveResource::find(:foo).new("foo")
+
+    # Wait for new instance to start
+    msg = q.pop
+    assert_equal "foo.foo.started", msg
+
+    # Now there are two instances
+    assert_equal 2, r.num_instances
+
+    # Get a proxy to to foo and delete it.
+    f = LiveResource::find(:foo, "foo")
+    f.delete
+
+    # Expect 2 stopped events
+    2.times do
+      msg = q.pop
+      assert_equal "foo.foo.stopped", msg
+    end
+
+    # Should get at least one deleted event
+    msg = q.pop
+    assert_equal "foo.foo.deleted", msg
+
+    # Depending on timing, we might get another deleted event
+    unless q.empty?
+      msg = q.pop
+      assert_equal "foo.foo.deleted", msg
+    end
+
+    # There are no instances of foo anymore
+    assert_equal 0, r.num_instances
+    assert_equal false, r.exists(r.instance_params_key)
+    assert_equal false, r.exists(r.remote_methods_key)
+    assert_equal false, r.exists(r.remote_attributes_key)
+    assert_equal false, r.exists("foo.foo.attributes.name")
+
+    # Stop and waith for class stopped event
+    LiveResource::stop
+
+    msg = q.pop
+    assert_equal "class.foo.stopped", msg
+  end
 end
