@@ -110,7 +110,7 @@ module LiveResource
 
         # Only unregister if there are no instances
         if num_instances > 0
-          warn("Unable to unregister instance: other copies of this instance still running?")
+          debug("Unable to unregister instance: other copies of this instance still running?")
           unwatch
           return
         end
