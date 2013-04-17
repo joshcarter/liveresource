@@ -26,8 +26,8 @@ module LiveResource
       resource_remote_methods = resource.remote_methods
       resource_remote_attributes = resource.remote_attributes
 
-      anything_set = false
       was_already_registered = registered?
+      anything_changed = false
 
       loop do
         watch remote_methods_key
@@ -35,21 +35,18 @@ module LiveResource
         watch instance_params_key
         watch instances_key
 
-        anything_set = false
         methods_changed = false
         attributes_changed = false
 
         # Called outside of 'multi' because we need to know 'registered_methods'
         # right now and not when 'exec' is called.
         if registered_methods.to_set != resource_remote_methods.to_set
-          anything_set = true
           methods_changed = true
         end
 
         # Called outside of 'multi' because we need to know
         # 'registered_attributes' right now and not when 'exec' is called.
         if registered_attributes.to_set != resource_remote_attributes.to_set
-          anything_set = true
           attributes_changed = true
         end
 
@@ -60,17 +57,17 @@ module LiveResource
         register_methods resource.remote_methods if methods_changed
         register_attributes resource.remote_attributes if attributes_changed
 
+        anything_changed = methods_changed || attributes_changed
+
         unless is_class?
           # Class resources don't have instance parameters.
           # Registered resource instances will have already had their
           # instance parameters set when initially created and it is not
           # appropriate to change that.
-          was_set = setnx instance_params_key, serialize(*instance_init_params)
-          anything_set = true if was_set
+          setnx instance_params_key, serialize(*instance_init_params)
         end
 
-        was_set = hsetnx instances_key, @redis_name, 0
-        anything_set = true if was_set
+        hsetnx instances_key, @redis_name, 0
 
         # exec is ran even if 'anything_set' is false (i.e. nothing was to
         # be executed) to protect against the situation where a watched key
@@ -79,10 +76,16 @@ module LiveResource
         break if exec
       end
 
-      if anything_set
-        event = was_already_registered ? "updated" : "created"
-        publish_event(event)
+      if was_already_registered
+        publish_event("updated") if anything_changed
+      else
+        publish_event("created")
       end
+
+      #if anything_set
+      #  event = was_already_registered ? "updated" : "created"
+      #  publish_event(event)
+      #end
     end
 
     def registered?

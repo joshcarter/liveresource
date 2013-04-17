@@ -7,13 +7,16 @@ class ResourceMaterializeTest < Test::Unit::TestCase
     LiveResource::RedisClient.logger.level = Logger::INFO
     @redis = LiveResource::RedisClient.new(:test_materialize, :foo)
     @ew = TestEventWaiter.new
+    @ew_log = false
     @pids = []
 
     # Subscribe to the instance channel for this resource to
     # get events when resources are created/started.
     Thread.new do
       Redis.new.subscribe(@redis.instance_channel) do |on|
-        on.message { |channel, msg| @ew.send_event msg }
+        on.message do |channel, msg|
+          @ew.send_event msg
+        end
       end
     end
   end
@@ -73,6 +76,8 @@ class ResourceMaterializeTest < Test::Unit::TestCase
     # Class resource started/created
     assert_equal "class.test_materialize.created", @ew.wait_for_event(5)
     assert_equal "class.test_materialize.started", @ew.wait_for_event(5)
+
+    @ew_log = true
 
     # Create some instances
     cr = LiveResource::find(:test_materialize)
