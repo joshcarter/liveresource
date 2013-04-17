@@ -20,6 +20,8 @@ module LiveResource
         @events = Queue.new
 
         @stopping = false
+
+        @run_thread = nil
       end
 
       def run

@@ -35,6 +35,11 @@ module LiveResource
       attr_reader :process_supervisor
       attr_reader :resource_supervisor
 
+      def initialize
+        @process_supervisor = nil
+        @resource_supervisor = nil
+      end
+
       # Supervise a single process given by "path"
       def supervise_process(name, path, options={}, &block)
         @process_supervisor ||= LiveResource::Supervisor::ProcessSupervisor.new(PROCESS_POLL_INTERVAL)
