@@ -48,6 +48,8 @@ module LiveResource
               do_add event[:worker]
             when :worker_exited
               do_exited_worker event[:worker]
+            when :worker_deleted
+              do_deleted_worker event[:worker]
             end
           end
 
@@ -129,6 +131,14 @@ module LiveResource
         else
           process_exited_worker(worker)
         end
+      end
+
+      def do_deleted_worker(worker)
+        # remove worker from workers list
+        @workers.remove worker
+
+        # mark worker as deleted
+        worker.delete
       end
 
       # Unsuspend workers who have been suspended for their suspend period.

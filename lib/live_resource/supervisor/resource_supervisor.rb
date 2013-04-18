@@ -75,6 +75,17 @@ module LiveResource
         end
       end
 
+      def remove_deleted_instance(resource_class, resource_name)
+        name = ResourceWorker.worker_name(resource_class, resource_name)
+        worker = @workers.find_by_name(name)
+        if worker
+          # Wait for worker to delete itself if it's still running
+          return if worker.running?
+          @events.push({type: :worker_deleted, worker: worker})
+          worker
+        end
+      end
+
       def add_instance_monitor(worker)
         channel = worker.redis.instance_channel
 
@@ -87,7 +98,12 @@ module LiveResource
             on.message do |c, msg|
               # TODO: Better messages. Use instance name to make this 
               # more efficient.
-              add_missing_instances(worker) if msg.include? "created"
+              resource_class, resource_name, type = msg.split('.')
+              if type == "created"
+                add_missing_instances(worker)
+              elsif type == "deleted"
+                remove_deleted_instance(resource_class, resource_name)
+              end
             end
           end
         end
@@ -117,8 +133,13 @@ module LiveResource
             raise RuntimeError, "Worker thread (#{thread}) exited but no such worker found."
           end
 
-          # Restart or suspend worker
-          @events.push({type: :worker_exited, worker: worker})
+          unless worker.resource.deleted?
+            # Restart or suspend worker
+            @events.push({type: :worker_exited, worker: worker})
+          else
+            # Delete this worker
+            @events.push({type: :worker_deleted, worker: worker})
+          end
         end
       end
 

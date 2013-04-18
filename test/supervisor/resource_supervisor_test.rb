@@ -145,4 +145,50 @@ class ResourceSupervisorTest < Test::Unit::TestCase
     # Class and instance should stop
     2.times { assert_equal :stopped, @ew.wait_for_event(5) }
   end
+
+  def test_delete_instance
+    @ts.supervise_resource Test1 do |on|
+      on.started { |worker| @ew.send_event :started }
+      on.stopped { |worker| @ew.send_event :stopped }
+      on.deleted { |worker| @ew.send_event :deleted }
+    end
+
+    @ts.run
+
+    rs = @ts.resource_supervisor
+
+    # Wait up to 5 seconds for class resource to start
+    assert_equal :started, @ew.wait_for_event(5)
+    assert rs.running_workers?
+
+    # Create a new instance
+    LiveResource::find(:test1).new("foo")
+
+    # Should get a started event when the new instance starts
+    assert_equal :started, @ew.wait_for_event(5)
+
+    # Supervisor should have 2 workers; one for class resource, one for instance
+    assert_equal 2, rs.num_workers
+
+    # Make sure we can find the instance
+    foo = LiveResource::find(:test1, :foo)
+    assert_not_nil foo
+
+    # Delete the instance
+    foo.delete
+
+    # Should get a deleted event when the instance deletes
+    assert_equal :deleted, @ew.wait_for_event(5)
+
+    # Should only have one worker now (for the class resource)
+    assert_equal 1, rs.num_workers
+
+    # No proxies should be available for foo
+    assert_nil LiveResource::find(:test1, :foo)
+
+    @ts.stop
+
+    # Class should stop
+    assert_equal :stopped, @ew.wait_for_event(5)
+  end
 end

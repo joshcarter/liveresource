@@ -38,6 +38,10 @@ module LiveResource
         @callbacks[:killed] << block
       end
 
+      def deleted(&block)
+        @callbacks[:deleted] << block
+      end
+
       def callback(event, arg)
         @callbacks[event].each { |callback| callback.call(arg) }
       end
@@ -94,6 +98,11 @@ module LiveResource
         @events.callback(:killed, self)
       end
 
+      def delete
+        @state = :deleted
+        @events.callback(:deleted, self)
+      end
+
       def stopped?
         @state == :stopped
       end
@@ -108,6 +117,10 @@ module LiveResource
 
       def suspended?
         @state == :suspended
+      end
+
+      def deleted?
+        @state == :deleted
       end
 
       def to_s
