@@ -31,8 +31,9 @@ class MethodTest < Test::Unit::TestCase
         run_sync(n, threads)
       end
 
-      puts ("n=#{n}, #{threads} threads: #{b.to_s.strip} " +
-      sprintf("%.0f m/sec", n / b.total)).pad
+      output = "n=#{n}, #{threads} threads: #{b.to_s.strip} " +
+        sprintf("%.0f m/sec", n / b.total)
+      puts output.pad
     end
 
     assert true
@@ -48,8 +49,9 @@ class MethodTest < Test::Unit::TestCase
         run_async(n, batch_size)
       end
 
-      puts ("n=#{n}, batches of #{batch_size}: #{b.to_s.strip} " +
-      sprintf("%.0f m/sec", n / b.total)).pad
+      output = "n=#{n}, batches of #{batch_size}: #{b.to_s.strip} " +
+        sprintf("%.0f m/sec", n / b.total)
+      puts output.pad
     end
 
     assert true
