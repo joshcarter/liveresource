@@ -52,7 +52,7 @@ module LiveResource
     end
 
     def deleted?
-      @dispater && @dispatcher.deleted?
+      @dispatcher && @dispatcher.deleted?
     end
 
     def remote_methods
