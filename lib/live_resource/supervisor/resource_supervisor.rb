@@ -92,7 +92,7 @@ module LiveResource
         # Already monitoring instances of this resource class
         return if @instance_monitors[channel]
 
-        @instance_monitors[channel] = Thread.new do
+        instance_monitor = Thread.new do
           subscribed_client = RedisClient.redis.clone
           subscribed_client.subscribe(channel) do |on|
             on.message do |c, msg|
@@ -107,6 +107,10 @@ module LiveResource
             end
           end
         end
+  
+        instance_monitor[:name] = "#{self.class.name} instance monitor"
+
+        @instance_monitors[channel] = instance_monitor
       end
 
       def wait_loop

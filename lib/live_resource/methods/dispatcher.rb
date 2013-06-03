@@ -24,6 +24,8 @@ module LiveResource
       return if @thread
 
       @thread = Thread.new { run }
+      @thread[:name] = "#{self.class.name} method dispatcher thread"
+      @thread
     end
 
     def stop
