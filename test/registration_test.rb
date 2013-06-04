@@ -137,8 +137,8 @@ class RegistrationTest < Test::Unit::TestCase
     assert_equal [:delete], r2.registered_methods
     assert_equal [:name, :name=].to_set, r2.registered_attributes.to_set
     LiveResource::find(:foo).new('bar')
-    assert_equal [:delete, :new_instance_method], r.registered_methods
-    assert_equal [:delete, :new_instance_method], r2.registered_methods
+    assert_equal [:delete, :new_instance_method].to_set, r.registered_methods.to_set
+    assert_equal [:delete, :new_instance_method].to_set, r2.registered_methods.to_set
     assert_equal [:name, :name=, :new_reader].to_set, r.registered_attributes.to_set
     assert_equal [:name, :name=, :new_reader].to_set, r2.registered_attributes.to_set
 
