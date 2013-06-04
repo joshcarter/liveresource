@@ -9,9 +9,9 @@ module LiveResource
     end
 
     def ignore_log(level)
-      @loghelper_ignores ||= LOGLEVELS.inject({}) do |h, level|
-        ignores = ENV["LIVERESOURCE_#{level.to_s.upcase}_IGNORE"]
-        h[level] = ignores ? ignores.split(":") : []
+      @loghelper_ignores ||= LOGLEVELS.inject({}) do |h, lvl|
+        ignores = ENV["LIVERESOURCE_#{lvl.to_s.upcase}_IGNORE"]
+        h[lvl] = ignores ? ignores.split(":") : []
         h
       end
 
