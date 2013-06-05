@@ -2,7 +2,7 @@ require_relative '../test_helper'
 
 class ResourceMaterializeTest < Test::Unit::TestCase
   def setup
-    Redis.new.flushall
+    flush_redis
 
     LiveResource::RedisClient.logger.level = Logger::INFO
     @redis = LiveResource::RedisClient.new(:test_materialize, :foo)
@@ -13,7 +13,7 @@ class ResourceMaterializeTest < Test::Unit::TestCase
     # Subscribe to the instance channel for this resource to
     # get events when resources are created/started.
     Thread.new do
-      Redis.new.subscribe(@redis.instance_channel) do |on|
+      LiveResource::RedisClient.redis.subscribe(@redis.instance_channel) do |on|
         on.message do |channel, msg|
           @ew.send_event msg
         end

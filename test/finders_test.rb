@@ -17,7 +17,7 @@ class FindersTest < Test::Unit::TestCase
   end
 
   def setup
-    Redis.new.flushall
+    flush_redis
 
     LiveResource::RedisClient.logger.level = Logger::INFO
 

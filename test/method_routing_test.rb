@@ -35,7 +35,7 @@ class MethodRoutingTest < Test::Unit::TestCase
   end
 
   def setup
-    Redis.new.flushall
+    flush_redis
     Class1.new
     Class2.new
     Class3.new

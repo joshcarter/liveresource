@@ -30,7 +30,7 @@ trap("SIGINT") do
   LiveResource::Console.start
 end
 
-Redis.new.flushall
+LiveResource::RedisClient.redis.flushdb
 Resource1.new
 Resource2.new
 

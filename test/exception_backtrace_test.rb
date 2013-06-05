@@ -22,7 +22,7 @@ class ExceptionBacktraceTest < Test::Unit::TestCase
   end
 
   def setup
-    Redis.new.flushall
+    flush_redis
     TestResource.new
   end
 

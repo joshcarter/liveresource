@@ -27,6 +27,8 @@ module LiveResource
     attr_writer :redis
     attr_reader :redis_class, :redis_name
 
+    DEFAULT_REDIS_DB = 0
+
     @@logger = Logger.new(STDERR)
     @@logger.level = Logger::WARN
 
@@ -58,7 +60,8 @@ module LiveResource
     def self.redis
       # Hash of Thread -> Redis instances
       @@redis ||= {}
-      @@proto_redis ||= Redis.new
+      redis_db = ENV['LIVERESOURCE_DB'] || DEFAULT_REDIS_DB
+      @@proto_redis ||= Redis.new(:db => redis_db)
 
       if @@redis[Thread.current].nil?
         @@redis[Thread.current] = @@proto_redis.clone

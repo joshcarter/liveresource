@@ -29,7 +29,7 @@ class ResourceCallbacksTest < Test::Unit::TestCase
   end
 
   def setup
-    Redis.new.flushall
+    flush_redis
 
     LiveResource::register(Class1).start
   end

@@ -17,7 +17,7 @@ class RegistrationTest < Test::Unit::TestCase
   end
 
   def setup
-    Redis.new.flushall
+    flush_redis
 
     LiveResource::RedisClient.logger.level = Logger::INFO
 
@@ -29,7 +29,7 @@ class RegistrationTest < Test::Unit::TestCase
     
     # Start a new thread and subscribe to the instance event channel
     @t = Thread.new do
-      Redis.new.subscribe(r.instance_channel) do |on|
+      LiveResource::RedisClient.redis.subscribe(r.instance_channel) do |on|
         on.subscribe do |channel, msg|
           @q.push "subscribed"
         end
