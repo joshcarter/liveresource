@@ -1,4 +1,5 @@
 require_relative 'test_helper'
+require 'set'
 
 class AttributeTest < Test::Unit::TestCase
   class MyClass
@@ -106,6 +107,19 @@ class AttributeTest < Test::Unit::TestCase
     # Now overwrite it
     ap.set_foo(13, true)
     assert_equal 13, ap.foo
+  end
+
+  def test_publish_on_change
+    ap = LiveResource::any(:attribute_provider)
+    ap.string = 'initial'
+
+    channel = "#{ap.redis_class}.#{ap.redis_name}.attributes.string"
+    redis_client = ap.instance_variable_get(:@redis)
+    redis_client.expects(:publish).with(channel, 'changed').times(2)
+    ap.string = 'change1'
+    ap.string = 'change2'
+    # One more time to prove this doesn't result in a message being published
+    ap.string = 'change2'
   end
 end
 

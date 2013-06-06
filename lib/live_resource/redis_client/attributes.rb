@@ -49,12 +49,20 @@ module LiveResource
       deserialize(get("#{@redis_class}.#{@redis_name}.attributes.#{key}"))
     end
 
-    def attribute_write(key, value, options={})
+    def attribute_write(key, new_value, options={})
       redis_key = "#{@redis_class}.#{@redis_name}.attributes.#{key}"
+      old_serialized_value = get(redis_key)
+      new_serialized_value = serialize(new_value)
       if options[:no_overwrite]
-        setnx(redis_key, serialize(value))
+        setnx(redis_key, new_serialized_value)
       else
-        set(redis_key, serialize(value))
+        set(redis_key, new_serialized_value)
+      end
+
+      if new_serialized_value != old_serialized_value
+        # The value isn't sent along with the message since the subscriber
+        # can get that if needed.
+        publish(redis_key, 'changed')
       end
     end
 

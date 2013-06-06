@@ -60,6 +60,7 @@ gem_spec = Gem::Specification.new do |spec|
                    'COPYING', 'GPL', 'README*']
 
   spec.add_dependency 'redis'
+	spec.add_development_dependency 'mocha'
 	spec.add_development_dependency 'yard'
 end
 
