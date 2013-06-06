@@ -133,7 +133,8 @@ module LiveResource
         list, result = brpop result_details(token), timeout
 
         if result.nil?
-          raise RuntimeError.new("timed out waiting for method #{token}")
+          raise RuntimeError.new(
+            "timed out after #{timeout} seconds waiting for method #{method.method} (#{token})")
         end
 
         result = deserialize(result)
