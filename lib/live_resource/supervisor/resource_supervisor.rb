@@ -137,12 +137,12 @@ module LiveResource
             raise RuntimeError, "Worker thread (#{thread}) exited but no such worker found."
           end
 
-          unless worker.resource.deleted?
-            # Restart or suspend worker
-            @events.push({type: :worker_exited, worker: worker})
-          else
+          if worker.resource.deleted?
             # Delete this worker
             @events.push({type: :worker_deleted, worker: worker})
+          else
+            # Restart or suspend worker
+            @events.push({type: :worker_exited, worker: worker})
           end
         end
       end
