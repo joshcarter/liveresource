@@ -74,7 +74,10 @@ module LiveResource
       end
 
       def restart
-        @state = :stopped
+        unless stopped?
+          stop
+          @state = :stopped
+        end
         start
         @events.callback(:restarted, self)
       end

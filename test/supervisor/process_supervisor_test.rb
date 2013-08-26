@@ -117,6 +117,7 @@ class ProcessSupervisorTest < Test::Unit::TestCase
 
     # The test script crashes immediately, but it should get restarted twice.
     2.times do
+      assert_equal :stopped, @ew.wait_for_event(5)
       assert_equal :started, @ew.wait_for_event(5)
     end
     
@@ -124,6 +125,7 @@ class ProcessSupervisorTest < Test::Unit::TestCase
     assert_equal :suspended, @ew.wait_for_event(5)
 
     # The test script should eventually get restarted
+    assert_equal :stopped, @ew.wait_for_event(5)
     assert_equal :started, @ew.wait_for_event(10)
 
     @ts.stop
