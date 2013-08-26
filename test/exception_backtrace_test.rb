@@ -22,7 +22,7 @@ class ExceptionBacktraceTest < Test::Unit::TestCase
   end
 
   def setup
-    Redis.new.flushall
+    flush_redis
     TestResource.new
   end
 
@@ -37,8 +37,20 @@ class ExceptionBacktraceTest < Test::Unit::TestCase
   def local_method_2(param)
     LiveResource::any(:test).resource_method_1(param)
   end
+
+  def local_method_3(param)
+    local_method_4(param)
+  end
   
-  def test_exception_backtrace
+  def local_method_4(param)
+    method = LiveResource::RemoteMethod.new(
+                          :method => :resource_method_1,
+                          :params => [param])
+    resource = LiveResource::any(:test)
+    resource.wait_for_done(resource.remote_send(method))
+  end
+
+  def test_exception_backtrace_via_most_common_access
     backtrace = nil
     
     begin
@@ -58,6 +70,33 @@ class ExceptionBacktraceTest < Test::Unit::TestCase
     rm1 = backtrace.index { |t| t =~ /resource_method_1/ }
     lm2 = backtrace.index { |t| t =~ /local_method_2/ }
     lm1 = backtrace.index { |t| t =~ /local_method_1/ }
+    
+    assert_equal 0, rm2
+    assert_equal 1, rm1
+    assert lm2 > rm1
+    assert_equal 1, lm1 - lm2
+  end
+  
+  def test_exception_backtrace_via_shortest_stacktrace_access
+    backtrace = nil
+    
+    begin
+      local_method_3("foo")
+    rescue LiveResource::Error => e
+      backtrace = e.backtrace
+    end
+    
+    # Backtrace should contain:
+    # - resource_method_2
+    # - resource_method_1
+    # (some stuff)
+    # - local_method_4
+    # - local_method_3
+    # (more stuff)
+    rm2 = backtrace.index { |t| t =~ /resource_method_2/ }
+    rm1 = backtrace.index { |t| t =~ /resource_method_1/ }
+    lm2 = backtrace.index { |t| t =~ /local_method_4/ }
+    lm1 = backtrace.index { |t| t =~ /local_method_3/ }
     
     assert_equal 0, rm2
     assert_equal 1, rm1

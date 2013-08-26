@@ -8,11 +8,24 @@ end
 require 'rubygems'
 require 'test/unit'
 require 'thread'
+require 'mocha'
 require 'pp'
 
 require_relative '../lib/live_resource'
 
 Thread.abort_on_exception = true
+
+ENV['LIVERESOURCE_DB'] ||= '15'
+
+class Test::Unit::TestCase
+  def flush_redis
+    LiveResource::RedisClient.redis.flushdb
+  end
+
+  def redis_dbsize
+    LiveResource::RedisClient.redis.dbsize
+  end
+end
 
 class TestEventWaiter
   def initialize

@@ -2,6 +2,22 @@ require 'logger'
 
 module LiveResource
   module LogHelper
+    LOGLEVELS = [:debug, :warn, :info, :error, :fatal]
+
+    def ignore_log?(level, str)
+      ignore_log(level).any? { |ign| str.start_with?(ign) }
+    end
+
+    def ignore_log(level)
+      @loghelper_ignores ||= LOGLEVELS.inject({}) do |h, lvl|
+        ignores = ENV["LIVERESOURCE_#{lvl.to_s.upcase}_IGNORE"]
+        h[lvl] = ignores ? ignores.split(":") : []
+        h
+      end
+
+      @loghelper_ignores[level]
+    end
+
     def logger
       @logger ||= nil
       if @logger.nil?
@@ -16,9 +32,12 @@ module LiveResource
       @logger = logger
     end
 
-    [:debug, :info, :warn, :error, :fatal].each do |level|
+    LOGLEVELS.each do |level|
       define_method(level) do |*params|
-        logger.send(level, params.join(' '))
+        str = params.join(' ')
+        return if self.ignore_log?(level, str)
+
+        logger.send(level, str)
       end
     end
   end

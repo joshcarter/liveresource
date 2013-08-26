@@ -39,7 +39,7 @@ class ForwardContinueTest < Test::Unit::TestCase
   end
 
   def setup
-    Redis.new.flushall
+    flush_redis
 
     Class1.new
     Class2.new
@@ -72,12 +72,12 @@ class ForwardContinueTest < Test::Unit::TestCase
   end
 
   def test_message_path
-    starting_keys = Redis.new.dbsize
+    starting_keys = redis_dbsize
 
     # LiveResource::RedisClient::logger.level = Logger::DEBUG
     assert_equal "FOO-BAR-BAZ", LiveResource::any(:class_1).method1("foo", "bar")
 
     # Should have no junk left over in Redis
-    assert_equal starting_keys, Redis.new.dbsize
+    assert_equal starting_keys, redis_dbsize
   end
 end

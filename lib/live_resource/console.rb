@@ -60,7 +60,7 @@ module LiveResource
     # Console command: list running resources.
     def self.list
       puts "Resources in this process:"
-      LiveResource::class_variable_get(:@@resources).each do |r|
+      LiveResource::send(:resources).each do |r|
         puts "- #{r.resource_class}: #{r.resource_name}"
       end
       nil

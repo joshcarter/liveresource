@@ -17,7 +17,7 @@ class RegistrationTest < Test::Unit::TestCase
   end
 
   def setup
-    Redis.new.flushall
+    flush_redis
 
     LiveResource::RedisClient.logger.level = Logger::INFO
 
@@ -29,7 +29,7 @@ class RegistrationTest < Test::Unit::TestCase
     
     # Start a new thread and subscribe to the instance event channel
     @t = Thread.new do
-      Redis.new.subscribe(r.instance_channel) do |on|
+      LiveResource::RedisClient.redis.subscribe(r.instance_channel) do |on|
         on.subscribe do |channel, msg|
           @q.push "subscribed"
         end
@@ -137,8 +137,8 @@ class RegistrationTest < Test::Unit::TestCase
     assert_equal [:delete], r2.registered_methods
     assert_equal [:name, :name=].to_set, r2.registered_attributes.to_set
     LiveResource::find(:foo).new('bar')
-    assert_equal [:delete, :new_instance_method], r.registered_methods
-    assert_equal [:delete, :new_instance_method], r2.registered_methods
+    assert_equal [:delete, :new_instance_method].to_set, r.registered_methods.to_set
+    assert_equal [:delete, :new_instance_method].to_set, r2.registered_methods.to_set
     assert_equal [:name, :name=, :new_reader].to_set, r.registered_attributes.to_set
     assert_equal [:name, :name=, :new_reader].to_set, r2.registered_attributes.to_set
 

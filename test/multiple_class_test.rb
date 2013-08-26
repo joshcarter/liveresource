@@ -24,7 +24,7 @@ class ClassMethodTest < Test::Unit::TestCase
   end
 
   def setup
-    Redis.new.flushall
+    flush_redis
 
     LiveResource::register(Class1).start
     LiveResource::register(Class2).start

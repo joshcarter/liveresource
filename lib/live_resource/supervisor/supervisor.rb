@@ -30,7 +30,9 @@ module LiveResource
 
         @run_thread = Thread.new do
           poll_thread = Thread.new { poll_loop }
+          poll_thread[:name] = "#{self.class.name} poll thread"
           wait_thread = Thread.new { wait_loop }
+          wait_thread[:name] = "#{self.class.name} wait thread"
 
           # Primary event loop. Wait for events and then process.
           # Classes inheriting from the Supervisor base class  will
@@ -56,6 +58,10 @@ module LiveResource
           poll_thread.join
           wait_thread.join
         end
+
+        @run_thread[:name] = "#{self.class.name} run thread"
+
+        @run_thread
       end
 
       def stop

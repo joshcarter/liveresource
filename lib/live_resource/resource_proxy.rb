@@ -101,7 +101,7 @@ module LiveResource
         # Merge the backtrace from the passed exception with this
         # stack trace so the final backtrace looks like the method_sender
         # called the method_provider directly.
-        trace = merge_backtrace caller, result.backtrace
+        trace = merge_backtrace caller(0), result.backtrace
         result.set_backtrace trace
 
         tag_errors(LiveResource::ResourceApiError) { raise result }
@@ -169,7 +169,7 @@ module LiveResource
 
       # For the sender trace, remove the ResourceProxy
       # part of the trace.
-      index = sender_trace.index do |t| 
+      index = sender_trace.rindex do |t| 
         t =~ /lib\/live_resource\/resource_proxy/
       end
       result += sender_trace[(index + 1) .. (sender_trace.length - 1)]

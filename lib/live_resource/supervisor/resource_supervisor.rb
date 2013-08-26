@@ -92,7 +92,7 @@ module LiveResource
         # Already monitoring instances of this resource class
         return if @instance_monitors[channel]
 
-        @instance_monitors[channel] = Thread.new do
+        instance_monitor = Thread.new do
           subscribed_client = RedisClient.redis.clone
           subscribed_client.subscribe(channel) do |on|
             on.message do |c, msg|
@@ -107,6 +107,10 @@ module LiveResource
             end
           end
         end
+  
+        instance_monitor[:name] = "#{self.class.name} instance monitor"
+
+        @instance_monitors[channel] = instance_monitor
       end
 
       def wait_loop
@@ -133,12 +137,12 @@ module LiveResource
             raise RuntimeError, "Worker thread (#{thread}) exited but no such worker found."
           end
 
-          unless worker.resource.deleted?
-            # Restart or suspend worker
-            @events.push({type: :worker_exited, worker: worker})
-          else
+          if worker.resource.deleted?
             # Delete this worker
             @events.push({type: :worker_deleted, worker: worker})
+          else
+            # Restart or suspend worker
+            @events.push({type: :worker_exited, worker: worker})
           end
         end
       end
