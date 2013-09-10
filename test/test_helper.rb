@@ -8,7 +8,7 @@ end
 require 'rubygems'
 require 'test/unit'
 require 'thread'
-require 'mocha'
+require 'mocha/setup'
 require 'pp'
 
 require_relative '../lib/live_resource'
