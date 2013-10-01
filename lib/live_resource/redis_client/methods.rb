@@ -109,7 +109,8 @@ module LiveResource
       unless exists(method_details(token))
         # Caller must have deleted method
         warn "setting result for method #{method.method} (#{token}), "\
-             "but caller deleted it (caller likely gave up waiting)"
+             "but caller deleted it (caller likely gave up waiting).  "\
+             "Result was: #{result}"
         unwatch
         return
       end
