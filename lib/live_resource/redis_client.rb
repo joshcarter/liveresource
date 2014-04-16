@@ -15,6 +15,7 @@ class Redis
           :port => client.port,
           :timeout => client.timeout,
           :logger => client.logger,
+          :path => client.path,
           :password => client.password,
           :db => client.db)
   end
@@ -28,6 +29,13 @@ module LiveResource
     attr_reader :redis_class, :redis_name
 
     DEFAULT_REDIS_DB = 0
+
+    # List of unix domain sockets to try to connect to before falling
+    # back to a TCP connection.  A default redis server configuration
+    # does not have unix domain sucket support enabled.
+    UNIX_SOCKETS = ["/tmp/redis.sock",
+                    "/var/run/redis.sock",
+                    "/var/run/redis/redis.sock"]
 
     @@logger = Logger.new(STDERR)
     @@logger.level = Logger::WARN
@@ -61,7 +69,29 @@ module LiveResource
       # Hash of Thread -> Redis instances
       @@redis ||= {}
       redis_db = ENV['LIVERESOURCE_DB'] || DEFAULT_REDIS_DB
-      @@proto_redis ||= Redis.new(:db => redis_db)
+
+      # Prefer a UNIX domain socket.  Fallback to a TCP connection.
+      # If a Redis host parameter is ever supported, unix sockets should
+      # only be tried if the redis server is running on the same system
+      # as this client.
+      @@proto_redis ||= nil
+      if @@proto_redis.nil?
+        redis = nil
+        UNIX_SOCKETS.each do |redis_path|
+          if File.exists?(redis_path)
+            redis = Redis.new(:db => redis_db, :path => redis_path)
+            begin
+              # Simply instantiating the Redis object is not enough to know
+              # whether or not the given UNIX socket is valid and can be used.
+              redis.ping
+            rescue Errno::EACCES, Errno::ENOENT, Errno::ENOTSOCK
+              redis = nil
+            end
+          end
+        end
+        redis ||= Redis.new(:db => redis_db)
+        @@proto_redis ||= redis
+      end
 
       if @@redis[Thread.current].nil?
         @@redis[Thread.current] = @@proto_redis.clone
