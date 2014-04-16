@@ -84,6 +84,7 @@ module LiveResource
               # Simply instantiating the Redis object is not enough to know
               # whether or not the given UNIX socket is valid and can be used.
               redis.ping
+              break
             rescue Errno::EACCES, Errno::ENOENT, Errno::ENOTSOCK
               redis = nil
             end
