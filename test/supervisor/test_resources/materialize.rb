@@ -23,9 +23,11 @@ ts = LiveResource::Supervisor::Supervisor.new
 ew = TestEventWaiter.new
 
 Signal.trap("TERM") do
-  ts.stop
-  raise RuntimeError unless ew.wait_for_event(5) == :stopped
-  exit
+  Thread.new do
+    ts.stop
+    raise RuntimeError unless ew.wait_for_event(5) == :stopped
+    exit
+  end
 end
 
 ts.supervise_resource TestMaterialize do |on|

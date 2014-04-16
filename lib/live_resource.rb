@@ -58,9 +58,11 @@ module LiveResource
     # Optionally invoke the exit callback before exiting.
     def run(exit_signal="INT", &exit_cb)
       Signal.trap(exit_signal) do
-        stop
-        yield if exit_cb
-        exit
+        Thread.new do
+          stop
+          yield if exit_cb
+          exit
+        end
       end
   
       # Put this thread to sleep
