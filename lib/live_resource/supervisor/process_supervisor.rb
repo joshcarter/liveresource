@@ -8,7 +8,7 @@ module LiveResource
       # Supervise a single process at the given path
       def add_process(name, path, options={}, &client_callback)
         exp_path = File.expand_path(path)
-        raise ArgumentError, "#{exp_path} does not exist." unless File.exists? exp_path
+        raise ArgumentError, "#{exp_path} does not exist." unless File.exist? exp_path
         raise ArgumentError, "#{exp_path} is not executable." unless File.executable? exp_path
 
         options[:client_callback] = client_callback if block_given?
@@ -23,7 +23,7 @@ module LiveResource
         options[:client_callback] = client_callback if block_given?
 
         exp_path = File.expand_path(path)
-        raise ArgumentError, "#{exp_path} does not exist." unless File.exists? exp_path
+        raise ArgumentError, "#{exp_path} does not exist." unless File.exist? exp_path
         raise ArgumentError, "#{exp_path} is not a directory." unless File.directory? exp_path
 
         # Open up the directory and create workers for all the files which are executable and
