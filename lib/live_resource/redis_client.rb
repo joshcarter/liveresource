@@ -78,7 +78,7 @@ module LiveResource
       if @@proto_redis.nil?
         redis = nil
         UNIX_SOCKETS.each do |redis_path|
-          if File.exists?(redis_path)
+          if File.exist?(redis_path)
             redis = Redis.new(:db => redis_db, :path => redis_path)
             begin
               # Simply instantiating the Redis object is not enough to know
