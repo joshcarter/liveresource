@@ -1,3 +1,5 @@
+require 'set'
+require 'thread'
 require_relative 'test_helper'
 
 class ForwardContinueTest < Test::Unit::TestCase
@@ -41,9 +43,9 @@ class ForwardContinueTest < Test::Unit::TestCase
   def setup
     flush_redis
 
-    Class1.new
-    Class2.new
-    Class3.new
+    @class1 = Class1.new
+    @class2 = Class2.new
+    @class3 = Class3.new
   end
 
   def teardown
@@ -72,12 +74,34 @@ class ForwardContinueTest < Test::Unit::TestCase
   end
 
   def test_message_path
-    starting_keys = redis_dbsize
+    starting_keys = Set.new(redis_keys)
+
+    # The methods_in_progress list is cleaned up in the resource instance
+    # thread after the result has been sent.  Need to wait for "method_done"
+    # to be called before checking the Redis keys.  This should only be
+    # necessary for the 3rd instance since the other two should have been
+    # cleaned up by the time this runs.
+    method_done_queue = Queue.new
+    class << @class3.redis
+      def method_done_queue=(queue)
+        @method_done_queue = queue
+      end
+      alias original_method_done method_done
+      def method_done(token)
+        original_method_done(token)
+        @method_done_queue << token
+      end
+    end
+    @class3.redis.method_done_queue = method_done_queue
 
     # LiveResource::RedisClient::logger.level = Logger::DEBUG
     assert_equal "FOO-BAR-BAZ", LiveResource::any(:class_1).method1("foo", "bar")
 
+    method_done_queue.pop
+
+    ending_keys = Set.new(redis_keys)
+
     # Should have no junk left over in Redis
-    assert_equal starting_keys, redis_dbsize
+    assert_equal starting_keys, ending_keys
   end
 end

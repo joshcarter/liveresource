@@ -22,6 +22,10 @@ class Test::Unit::TestCase
     LiveResource::RedisClient.redis.flushdb
   end
 
+  def redis_keys
+    LiveResource::RedisClient.redis.keys
+  end
+
   def redis_dbsize
     LiveResource::RedisClient.redis.dbsize
   end
