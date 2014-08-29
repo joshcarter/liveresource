@@ -1,4 +1,5 @@
 require 'set'
+require 'thread'
 require_relative 'test_helper'
 
 class MethodTest < Test::Unit::TestCase
@@ -31,11 +32,6 @@ class MethodTest < Test::Unit::TestCase
       str.upcase
     end
 
-    def two_second_upcase(str)
-      sleep 2
-      str.upcase
-    end
-
     def add(a, b)
       a + b
     end
@@ -50,12 +46,42 @@ class MethodTest < Test::Unit::TestCase
       myclass.a = b
       myclass
     end
+
+    def delayed_upcase(str)
+      # So the caller can control when this method completes
+      delayed_upcase_queue.pop
+      str.upcase
+    end
+
+    def delayed_upcase_queue
+      if defined?(@delayed_upcase_queue)
+        @delayed_upcase_queue
+      else
+        @delayed_upcase_queue = Queue.new
+      end
+    end
   end
 
   def setup
     flush_redis
 
-    Server.new
+    @server = Server.new
+
+    # The methods_in_progress list is cleaned up in the resource instance
+    # thread after the result has been sent.  Need to wait for "method_done"
+    # to be called before checking the Redis keys.
+    @method_done_queue = Queue.new
+    class << @server.redis
+      def method_done_queue=(queue)
+        @method_done_queue = queue
+      end
+      alias original_method_done method_done
+      def method_done(token)
+        original_method_done(token)
+        @method_done_queue << token
+      end
+    end
+    @server.redis.method_done_queue = @method_done_queue
   end
 
   def teardown
@@ -103,6 +129,9 @@ class MethodTest < Test::Unit::TestCase
     assert_equal "b", myclass.a
     assert_equal "a", myclass.b
 
+    # One for each method call
+    5.times { @method_done_queue.pop }
+
     # Should have no junk left over in Redis
     ending_keys = Set.new(redis_keys)
     assert_equal starting_keys, ending_keys
@@ -117,6 +146,9 @@ class MethodTest < Test::Unit::TestCase
 
     # Do a sync call afterward to make sure the first is done
     client.upcase "foobar"
+
+    # One for each method call
+    2.times { @method_done_queue.pop }
 
     ending_keys = Set.new(redis_keys)
     assert_equal starting_keys, ending_keys
@@ -136,6 +168,7 @@ class MethodTest < Test::Unit::TestCase
 
     100.times do
       client.upcase("foobar")
+      @method_done_queue.pop
     end
 
     # Should have no junk left over in Redis
@@ -154,6 +187,8 @@ class MethodTest < Test::Unit::TestCase
 
     # Wait for valid result.
     assert_equal 'FOOBAR', value.value
+
+    @method_done_queue.pop
 
     # Should have no junk left over in Redis, BUT we can still get the
     # future's value as many times as we want.
@@ -200,6 +235,8 @@ class MethodTest < Test::Unit::TestCase
       value.value(1)
     end
 
+    @method_done_queue.pop
+
     # Should have no junk left over in Redis
     ending_keys = Set.new(redis_keys)
     assert_equal starting_keys, ending_keys
@@ -212,14 +249,30 @@ class MethodTest < Test::Unit::TestCase
     # Turn up log level; this test will generate an appropriate warning.
     old_level = LiveResource::RedisClient.logger.level = Logger::ERROR
 
-    # This will fail (as above) but the server will actually complete it a second
-    # later. Need to make sure server cleans up ok.
+    method_cleanup_queue = Queue.new
+    client_redis = client.instance_variable_get(:@redis)
+    class << client_redis
+      def method_cleanup_queue=(queue)
+        @method_cleanup_queue = queue
+      end
+      alias original_method_cleanup method_cleanup
+      def method_cleanup(token)
+        original_method_cleanup(token)
+        @method_cleanup_queue << token
+      end
+    end
+    client_redis.method_cleanup_queue = method_cleanup_queue 
+
+    # This will fail (as above) but the server will actually complete it when
+    # we signal it to finish later. Need to make sure server cleans up ok.
     assert_raise(RuntimeError) do
-      value = client.two_second_upcase? "foobar"
+      value = client.delayed_upcase? "foobar"
       value.value(1)
     end
 
-    sleep 2
+    @server.delayed_upcase_queue << "ok to finish delayed_upcase_queue"
+    @method_done_queue.pop
+    method_cleanup_queue.pop
 
     # Should have no junk left over in Redis
     ending_keys = Set.new(redis_keys)
