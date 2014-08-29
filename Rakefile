@@ -56,7 +56,7 @@ gem_spec = Gem::Specification.new do |spec|
 	spec.description = 'Remote-callable attributes and methods for ' \
     'IPC and cluster use.'
 
-  spec.files = Dir['Rakefile', '{benchmark,lib,old,test}/**/*', 'BSDL',
+  spec.files = Dir['Rakefile', '{benchmark,lib,test}/**/*', 'BSDL',
                    'COPYING', 'GPL', 'README*']
 
   spec.add_dependency 'redis'
