@@ -1,3 +1,4 @@
+require 'set'
 require_relative 'test_helper'
 
 class MethodTest < Test::Unit::TestCase
@@ -82,7 +83,7 @@ class MethodTest < Test::Unit::TestCase
   # end
 
   def test_synchronous_method
-    starting_keys = redis_dbsize
+    starting_keys = Set.new(redis_keys)
     client = LiveResource::any(:server)
 
     # Zero parameters
@@ -103,11 +104,12 @@ class MethodTest < Test::Unit::TestCase
     assert_equal "a", myclass.b
 
     # Should have no junk left over in Redis
-    assert_equal starting_keys, redis_dbsize
+    ending_keys = Set.new(redis_keys)
+    assert_equal starting_keys, ending_keys
   end
 
   def test_method_with_no_response
-    starting_keys = redis_dbsize
+    starting_keys = Set.new(redis_keys)
     client = LiveResource::any(:server)
 
     # Do one async call; dispatcher should auto-clean up
@@ -116,7 +118,8 @@ class MethodTest < Test::Unit::TestCase
     # Do a sync call afterward to make sure the first is done
     client.upcase "foobar"
 
-    assert_equal starting_keys, redis_dbsize
+    ending_keys = Set.new(redis_keys)
+    assert_equal starting_keys, ending_keys
   end
 
   def test_no_matching_method
@@ -128,7 +131,7 @@ class MethodTest < Test::Unit::TestCase
   end
 
   def test_method_stress
-    starting_keys = redis_dbsize
+    starting_keys = Set.new(redis_keys)
     client = LiveResource::any(:server)
 
     100.times do
@@ -136,11 +139,12 @@ class MethodTest < Test::Unit::TestCase
     end
 
     # Should have no junk left over in Redis
-    assert_equal starting_keys, redis_dbsize
+    ending_keys = Set.new(redis_keys)
+    assert_equal starting_keys, ending_keys
   end
 
   def test_method_call_with_future
-    starting_keys = redis_dbsize
+    starting_keys = Set.new(redis_keys)
     client = LiveResource::any(:server)
 
     value = client.slow_upcase? 'foobar'
@@ -153,7 +157,8 @@ class MethodTest < Test::Unit::TestCase
 
     # Should have no junk left over in Redis, BUT we can still get the
     # future's value as many times as we want.
-    assert_equal starting_keys, redis_dbsize
+    ending_keys = Set.new(redis_keys)
+    assert_equal starting_keys, ending_keys
     assert_equal 'FOOBAR', value.value
   end
 
@@ -188,7 +193,7 @@ class MethodTest < Test::Unit::TestCase
 
     LiveResource::stop # No servers
 
-    starting_keys = redis_dbsize
+    starting_keys = Set.new(redis_keys)
 
     assert_raise(RuntimeError) do
       value = client.upcase? "foobar"
@@ -196,11 +201,12 @@ class MethodTest < Test::Unit::TestCase
     end
 
     # Should have no junk left over in Redis
-    assert_equal starting_keys, redis_dbsize
+    ending_keys = Set.new(redis_keys)
+    assert_equal starting_keys, ending_keys
   end
 
   def test_method_completes_after_timeout
-    starting_keys = redis_dbsize
+    starting_keys = Set.new(redis_keys)
     client = LiveResource::any(:server)
 
     # Turn up log level; this test will generate an appropriate warning.
@@ -216,7 +222,8 @@ class MethodTest < Test::Unit::TestCase
     sleep 2
 
     # Should have no junk left over in Redis
-    assert_equal starting_keys, redis_dbsize
+    ending_keys = Set.new(redis_keys)
+    assert_equal starting_keys, ending_keys
 
     LiveResource::RedisClient.logger.level = old_level
   end
